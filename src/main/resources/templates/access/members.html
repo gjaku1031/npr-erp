@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page('직원', ~{::main})}">
+<body>
+<main class="stack" th:with="base=${ctx.path('/access/members')}, canManage=${ctx.can('access.membership.manage')}, canAssign=${ctx.can('access.assignment.manage')}">
+  <div class="page-head">
+    <div>
+      <h1>직원</h1>
+      <p class="muted" th:text="'권한 정책 버전 ' + ${policyVersion}">정책 버전</p>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>이름</th><th>상태</th><th>역할</th><th>소속 시작</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="membership : ${memberships}" th:with="active=${membership.status().name() == 'ACTIVE'}, mine=${assignments != null} ? ${assignments.get(membership.id())} : ${null}">
+          <td class="nowrap"><strong th:text="${@names.of(membership.accountId())}">이름</strong>
+            <span class="badge info" th:if="${membership.accountId() == ctx.accountId()}">나</span></td>
+          <td><span class="badge" th:classappend="${active} ? 'ok'" th:text="${active} ? '재직' : '종료'">재직</span></td>
+          <td>
+            <div class="chips" th:if="${mine != null}">
+              <span class="chip" th:each="assignment : ${mine}" th:text="${assignment.roleName()}">역할</span>
+            </div>
+            <span class="small muted" th:if="${assignments != null and (mine == null or mine.isEmpty())}">역할 없음</span>
+          </td>
+          <td class="muted nowrap" th:text="${@fmt.dateTime(membership.startedAt())}">시각</td>
+          <td class="right">
+            <details th:if="${active and (canManage or canAssign)}">
+              <summary class="small">관리</summary>
+              <form class="form" method="post" th:if="${canAssign and roles != null}" th:action="@{${base + '/' + membership.id()}}" style="text-align:left">
+                <input type="hidden" name="policyVersion" th:value="${policyVersion}">
+                <div class="chips">
+                  <label class="check" th:each="role : ${roles}" th:if="${role.status().name() == 'ACTIVE'}">
+                    <input type="checkbox" name="roleIds" th:value="${role.id()}"
+                           th:checked="${mine != null and #lists.contains(mine.![roleId()], role.id())}">
+                    <span th:text="${role.name()}">역할</span>
+                  </label>
+                </div>
+                <div class="actions"><button class="btn small" name="action" value="roles">역할 저장</button></div>
+              </form>
+              <form class="row" method="post" th:if="${canManage}" th:action="@{${base + '/' + membership.id()}}" style="margin-top:8px">
+                <input type="hidden" name="policyVersion" th:value="${policyVersion}">
+                <input type="password" name="password" placeholder="새 비밀번호" autocomplete="new-password" style="width:150px">
+                <button class="btn small" name="action" value="password">비밀번호 변경</button>
+                <button class="btn small danger" name="action" value="end" formnovalidate
+                        onclick="return confirm('소속을 종료하면 이 학원의 모든 권한이 사라집니다. 계속할까요?')">소속 종료</button>
+              </form>
+            </details>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" th:if="${canManage}">
+    <h2>새 직원 등록</h2>
+    <form class="form" method="post" th:action="@{${base}}">
+      <input type="hidden" name="policyVersion" th:value="${policyVersion}">
+      <div class="two">
+        <label>이름 <input name="displayName" maxlength="120" required></label>
+        <label>로그인 아이디 <input name="username" maxlength="120" required autocomplete="off"></label>
+      </div>
+      <label>초기 비밀번호 <input type="password" name="password" required autocomplete="new-password"></label>
+      <fieldset th:if="${canAssign and roles != null}">
+        <legend>역할</legend>
+        <div class="chips">
+          <label class="check" th:each="role : ${roles}" th:if="${role.status().name() == 'ACTIVE'}">
+            <input type="checkbox" name="roleIds" th:value="${role.id()}"><span th:text="${role.name()}">역할</span>
+          </label>
+        </div>
+      </fieldset>
+      <p class="small muted">역할을 주지 않으면 로그인은 되지만 아무 메뉴도 보이지 않습니다.</p>
+      <div class="actions"><button class="btn primary">등록</button></div>
+    </form>
+  </section>
+</main>
+</body>
+</html>

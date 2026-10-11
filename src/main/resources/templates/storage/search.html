@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page('검색', ~{::main})}">
+<body>
+<main class="stack" th:with="base=${ctx.path('/storage')}">
+  <div class="page-head">
+    <div>
+      <div class="crumbs"><a th:href="@{${base}}">자료실</a><span class="sep">/</span></div>
+      <h1 th:text="'“' + ${query} + '” 검색 결과'">검색 결과</h1>
+    </div>
+    <form class="row" method="get" th:action="@{${base + '/search'}}">
+      <input type="search" name="q" th:value="${query}" required maxlength="100" style="width:200px">
+      <button class="btn">검색</button>
+    </form>
+  </div>
+  <section class="card">
+    <p class="empty" th:if="${results.isEmpty()}">볼 수 있는 항목 가운데 일치하는 것이 없습니다.</p>
+    <table th:unless="${results.isEmpty()}">
+      <tr th:each="node : ${results}">
+        <td>
+          <div class="file-name">
+            <span class="icon" th:text="${node.folder()} ? '📁' : '📄'">📄</span>
+            <a th:if="${node.folder()}" th:href="@{${base + '/f/' + node.id()}}" th:text="${node.name()}">폴더</a>
+            <a th:if="${!node.folder() and readable.contains(node.id())}" th:href="@{${base + '/n/' + node.id() + '/download'}}" th:text="${node.name()}">파일</a>
+            <span th:if="${!node.folder() and !readable.contains(node.id())}" th:text="${node.name()}">파일</span>
+          </div>
+        </td>
+        <td class="num muted" th:text="${@fmt.size(node.sizeBytes())}">크기</td>
+        <td class="right"><a class="btn small" th:if="${node.parentId() != null}" th:href="@{${base + '/f/' + node.parentId()}}">폴더 열기</a></td>
+      </tr>
+    </table>
+  </section>
+</main>
+</body>
+</html>

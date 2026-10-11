@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page('일일보고', ~{::main})}">
+<body>
+<main class="stack">
+  <div class="page-head"><h1>일일보고</h1></div>
+
+  <section class="card stack">
+    <h2 th:text="'오늘 · ' + ${@fmt.date(today)}">오늘</h2>
+    <p class="empty" th:if="${journal == null}">오늘의 일일보고가 아직 만들어지지 않았습니다. 팀장이 만들면 작성할 수 있습니다.</p>
+    <th:block th:if="${journal != null}">
+      <div class="row">
+        <span th:if="${todayReport == null}" class="badge">작성 전</span>
+        <span th:if="${todayReport != null and todayReport.status().name() == 'DRAFT'}" class="badge warn">작성 중</span>
+        <th:block th:if="${todayReport != null and todayReport.status().name() == 'SUBMITTED'}">
+          <span th:replace="~{parts :: report-state(${todayReport.state()})}"></span>
+        </th:block>
+        <span class="small muted" th:text="'체크리스트 ' + ${journal.items().size()} + '항목'">항목</span>
+        <span class="badge info" th:if="${journal.specialPeriod()}">특강기간</span>
+      </div>
+      <div class="row">
+        <a class="btn primary" th:href="@{${ctx.path('/reports/' + today)}}"
+           th:text="${todayReport == null} ? '작성 시작' : (${todayReport.status().name() == 'DRAFT'} ? '이어서 작성' : '제출한 내용 보기')">작성</a>
+        <form class="inline" method="post" th:if="${todayReport != null and todayReport.state().name() == 'WAITING'}"
+              th:action="@{${ctx.path('/reports/' + today + '/reopen')}}">
+          <button class="btn">제출 되돌리기</button>
+        </form>
+        <span class="small muted" th:if="${todayReport != null and todayReport.confirmed()}">확인이 끝난 보고는 고칠 수 없습니다.</span>
+      </div>
+    </th:block>
+  </section>
+
+  <section class="card">
+    <h2>지난 보고</h2>
+    <p class="empty" th:if="${history.isEmpty()}">제출한 보고가 없습니다.</p>
+    <div class="table-wrap" th:unless="${history.isEmpty()}">
+      <table>
+        <thead><tr><th>날짜</th><th>상태</th><th>알림장</th><th>제출 시각</th></tr></thead>
+        <tbody>
+        <tr th:each="report : ${history}">
+          <td><a th:href="@{${ctx.path('/reports/' + report.date())}}" th:text="${@fmt.date(report.date())}">날짜</a></td>
+          <td><span th:replace="~{parts :: report-state(${report.state()})}"></span></td>
+          <td class="muted" th:text="${report.payload().notebooks().size()} + '개 반'">반</td>
+          <td class="muted" th:text="${@fmt.dateTime(report.submittedAt())}">시각</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+</body>
+</html>

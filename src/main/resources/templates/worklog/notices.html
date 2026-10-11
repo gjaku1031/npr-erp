@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page('공지', ~{::main})}">
+<body>
+<main class="stack" th:with="base=${ctx.path('/notices')}">
+  <div class="page-head"><h1>공지</h1></div>
+
+  <section class="card">
+    <h2>새 공지</h2>
+    <form class="form" method="post" th:action="@{${base}}">
+      <label>내용 <span class="small muted">굵게(**글자**), 목록(- 항목), 링크([이름](주소))를 쓸 수 있습니다. 새 공지는 맨 위에 놓이고 바로 노출됩니다.</span>
+        <textarea name="body" maxlength="4000" required></textarea>
+      </label>
+      <div class="actions"><button class="btn primary">등록</button></div>
+    </form>
+  </section>
+
+  <section class="card stack">
+    <h2>공지 목록 <span class="small muted">위에 있는 공지가 먼저 보입니다</span></h2>
+    <p class="empty" th:if="${notices.isEmpty()}">공지가 없습니다.</p>
+    <div class="check-item" th:each="notice, stat : ${notices}" th:with="action=${base + '/' + notice.id()}">
+      <div class="row">
+        <span class="badge ok" th:if="${notice.active()}">노출 중</span>
+        <span class="badge" th:unless="${notice.active()}">숨김</span>
+        <span class="small muted" th:text="${@names.of(notice.authorAccountId())} + ' · ' + ${@fmt.date(notice.postedOn())}">작성</span>
+        <span class="grow"></span>
+        <form class="row" method="post" th:action="@{${action}}">
+          <button class="btn small" name="action" value="up" th:disabled="${stat.first}">↑</button>
+          <button class="btn small" name="action" value="down" th:disabled="${stat.last}">↓</button>
+          <button class="btn small" name="action" th:value="${notice.active()} ? 'hide' : 'show'" th:text="${notice.active()} ? '숨기기' : '노출하기'">숨기기</button>
+        </form>
+        <form class="inline" method="post" th:action="@{${action}}" data-confirm="공지를 지울까요?">
+          <button class="btn small danger" name="action" value="delete">삭제</button>
+        </form>
+      </div>
+      <div class="markdown" th:with="html=${@markdown.block(notice.body())}" th:utext="${html}">공지</div>
+      <details>
+        <summary>수정</summary>
+        <form class="form" method="post" th:action="@{${action}}">
+          <textarea name="body" maxlength="4000" required th:text="${notice.body()}"></textarea>
+          <div class="actions"><button class="btn" name="action" value="update">저장</button></div>
+        </form>
+      </details>
+    </div>
+  </section>
+</main>
+</body>
+</html>

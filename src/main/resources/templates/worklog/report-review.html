@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page('보고 열람', ~{::main})}">
+<body>
+<main class="stack" th:with="payload=${report.payload()}, base=${ctx.path('/journals')}">
+  <div class="page-head">
+    <div>
+      <div class="crumbs"><a th:href="@{${base}(date=${report.date()})}">일일보고 관리</a><span class="sep">/</span></div>
+      <h1 th:text="${@names.of(report.accountId())} + ' · ' + ${@fmt.date(report.date())}">보고</h1>
+      <div class="row" style="margin-top:8px">
+        <span th:replace="~{parts :: report-state(${report.state()})}"></span>
+        <span class="small muted" th:text="'제출 ' + ${@fmt.dateTime(report.submittedAt())}">제출 시각</span>
+        <span class="badge info" th:if="${payload.specialPeriod()}">특강기간</span>
+      </div>
+    </div>
+    <div class="actions">
+      <form method="post" th:if="${report.state().name() == 'WAITING'}"
+            th:action="@{${base + '/' + report.date() + '/reports/' + report.accountId() + '/confirm'}}">
+        <button class="btn primary">보고 확인 처리</button>
+      </form>
+    </div>
+  </div>
+
+  <section class="card stack">
+    <h2>1. 체크리스트</h2>
+    <div class="check-item" th:each="item : ${journal.items()}" th:with="answer=${payload.answerOf(item.id())}">
+      <div class="row">
+        <span class="badge ok" th:if="${answer.checked()}">✓</span>
+        <span class="badge" th:unless="${answer.checked()}">–</span>
+        <strong th:text="${item.text()}">항목</strong>
+        <span class="badge warn" th:if="${item.required()}">보고 필수</span>
+      </div>
+      <pre class="report" th:if="${!#strings.isEmpty(answer.note())}" th:text="${answer.note()}">확인 결과</pre>
+      <div th:replace="~{parts :: files(${files.get(item.id())}, false)}"></div>
+    </div>
+  </section>
+
+  <div class="cols">
+    <section class="card">
+      <h2>2. 알림장</h2>
+      <p class="empty" th:if="${payload.notebooks().isEmpty()}">처리한 반이 없습니다.</p>
+      <table th:unless="${payload.notebooks().isEmpty()}">
+        <tr th:each="mark : ${payload.notebooks()}">
+          <td th:text="${mark.className()}">반</td>
+          <td><span class="badge" th:classappend="${mark.written()} ? 'ok'" th:text="${mark.written()} ? '게시함' : '게시 전'">게시함</span></td>
+          <td class="muted" th:text="${mark.title()}">제목</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>5. 업무 확인</h2>
+      <p class="empty" th:if="${payload.tasks().isEmpty()}">기간에 든 업무가 없었습니다.</p>
+      <table th:unless="${payload.tasks().isEmpty()}">
+        <tr th:each="mark : ${payload.tasks()}">
+          <td><a th:href="@{${ctx.path('/tasks/' + mark.taskId())}}" th:text="${mark.title()}">업무</a></td>
+          <td>
+            <span class="badge ok" th:if="${mark.status().name() == 'DONE'}">완료</span>
+            <span class="badge warn" th:if="${mark.status().name() == 'UNDONE'}">미완료</span>
+            <span class="badge" th:if="${mark.status().name() == 'NONE'}" th:text="${mark.kind().label()}">표시 없음</span>
+          </td>
+        </tr>
+      </table>
+    </section>
+  </div>
+
+  <section class="card stack">
+    <h2>3. 상담 확인
+      <span class="badge" th:classappend="${payload.counselChecked()} ? 'ok'" th:text="${payload.counselChecked()} ? '확인함' : '확인 안 함'">확인함</span>
+    </h2>
+    <p class="small muted">상담 기록은 지금 외부 시스템에서 다시 읽은 것입니다.</p>
+    <p class="empty" th:if="${counselRecords.isEmpty()}">이 날짜에 남긴 상담 기록이 없습니다.</p>
+    <table th:unless="${counselRecords.isEmpty()}">
+      <tr th:each="record : ${counselRecords}">
+        <td class="nowrap" th:text="${record.studentName()}">학생</td>
+        <td th:text="${record.topic()}">주제</td>
+        <td th:text="${record.content()}">내용</td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>4. 출결 확인
+      <span class="badge" th:classappend="${payload.attendanceChecked()} ? 'ok'" th:text="${payload.attendanceChecked()} ? '확인함' : '확인 안 함'">확인함</span>
+    </h2>
+    <div class="chips">
+      <span class="chip" th:each="classroom : ${payload.classrooms()}" th:text="${classroom.name()}">반</span>
+    </div>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page('일일보고 관리', ~{::main})}">
+<body>
+<main class="stack" th:with="base=${ctx.path('/journals')}, canManage=${ctx.can('worklog.journal.manage')}">
+  <div class="page-head"><h1>일일보고 관리</h1></div>
+
+  <div class="split">
+    <div class="stack">
+      <section class="card stack" th:if="${canManage}">
+        <h2>날짜 만들기</h2>
+        <form class="row" method="post" th:action="@{${base}}">
+          <input type="date" name="date" required th:value="${selected}" style="width:auto">
+          <button class="btn primary">만들기</button>
+        </form>
+        <p class="small muted">오늘의 체크리스트를 복사합니다. 오늘 것이 없으면 그 날짜 이전의 가장 최근 것을 복사합니다.</p>
+      </section>
+
+      <section class="card stack" th:if="${canManage}">
+        <h2>설정</h2>
+        <form class="form" method="post" th:action="@{${base + '/settings'}}">
+          <label>월수금 반 주간테스트 시행일 <input type="date" name="weeklyTestMwf" th:value="${settings.weeklyTestMwf()}"></label>
+          <label>화목토 반 주간테스트 시행일 <input type="date" name="weeklyTestTts" th:value="${settings.weeklyTestTts()}"></label>
+          <label class="check"><input type="checkbox" name="specialPeriod" value="true" th:checked="${settings.specialPeriod()}"> 특강기간</label>
+          <p class="small muted">특강기간은 이후에 만드는 날짜에 적용됩니다. 이미 만든 날짜는 그때의 값을 유지합니다.</p>
+          <div class="actions"><button class="btn">저장</button></div>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>날짜 목록</h2>
+        <p class="empty" th:if="${journals.isEmpty()}">만든 일일보고가 없습니다.</p>
+        <table th:unless="${journals.isEmpty()}">
+          <tr th:each="summary : ${journals}">
+            <td>
+              <a th:href="@{${base}(date=${summary.date()})}" th:text="${@fmt.date(summary.date())}"
+                 th:style="${summary.date() == selected} ? 'font-weight:700'">날짜</a>
+              <div class="small muted" th:text="'체크리스트 ' + ${summary.itemCount()} + '항목 · 제출 ' + ${summary.submittedCount()} + '/' + ${reporterCount} + '명'">요약</div>
+            </td>
+            <td class="right">
+              <span class="badge info" th:if="${summary.phase().name() == 'UPCOMING'}">예정</span>
+              <span class="badge ok" th:if="${summary.phase().name() == 'TODAY'}">오늘</span>
+              <span class="badge" th:if="${summary.phase().name() == 'PAST'}">마감</span>
+            </td>
+          </tr>
+        </table>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="card stack">
+        <h2 th:text="${@fmt.date(selected)}">날짜</h2>
+        <p class="empty" th:if="${journal == null}">이 날짜의 일일보고가 없습니다.</p>
+        <th:block th:if="${journal != null}" th:with="open=${canManage and journal.phase().name() != 'PAST'}">
+          <div class="row">
+            <span class="badge info" th:if="${journal.specialPeriod()}">특강기간에 만듦</span>
+            <span class="small muted" th:if="${journal.phase().name() == 'PAST'}">지난 날짜의 체크리스트는 고칠 수 없습니다.</span>
+          </div>
+          <p class="empty" th:if="${journal.items().isEmpty()}">체크리스트 항목이 없습니다.</p>
+          <div class="acl-row" th:each="item : ${journal.items()}">
+            <div><span th:text="${item.text()}">항목</span>
+              <span class="badge warn" th:if="${item.required()}">보고 필수</span>
+              <span class="badge" th:unless="${item.required()}">보고 선택</span></div>
+            <form class="row" method="post" th:if="${open}" th:action="@{${base + '/' + selected + '/items/' + item.id()}}">
+              <button class="btn small" name="action" th:value="${item.required()} ? 'relax' : 'require'" th:text="${item.required()} ? '선택으로' : '필수로'">필수로</button>
+              <button class="btn small danger" name="action" value="delete">삭제</button>
+            </form>
+          </div>
+          <form class="row" method="post" th:if="${open}" th:action="@{${base + '/' + selected + '/items'}}">
+            <input class="grow" name="text" maxlength="300" placeholder="새 항목" required style="width:auto;flex:1">
+            <label class="check"><input type="checkbox" name="required" value="true"> 보고 필수</label>
+            <button class="btn">추가</button>
+          </form>
+          <form method="post" th:if="${canManage}" th:action="@{${base + '/' + selected + '/delete'}}"
+                data-confirm="이 날짜의 체크리스트와 제출된 보고, 첨부를 모두 지웁니다. 계속할까요?">
+            <button class="btn small danger">이 날짜 지우기</button>
+          </form>
+        </th:block>
+      </section>
+
+      <section class="card" th:if="${board != null and journal != null}">
+        <h2>제출 현황</h2>
+        <p class="empty" th:if="${journal.phase().name() == 'UPCOMING'}">아직 시작 전인 날짜입니다.</p>
+        <p class="empty" th:if="${board.isEmpty()}">일일보고를 쓰는 사람이 없습니다.</p>
+        <table th:if="${journal.phase().name() != 'UPCOMING' and !board.isEmpty()}">
+          <tr th:each="entry : ${board}">
+            <td th:text="${@names.of(entry.accountId())}">이름</td>
+            <td><span th:replace="~{parts :: report-state(${entry.state()})}"></span></td>
+            <td class="right">
+              <a class="btn small" th:if="${entry.state().name() != 'NOT_SUBMITTED'}"
+                 th:href="@{${base + '/' + selected + '/reports/' + entry.accountId()}}">보고 열기</a>
+            </td>
+          </tr>
+        </table>
+      </section>
+    </div>
+  </div>
+</main>
+</body>
+</html>

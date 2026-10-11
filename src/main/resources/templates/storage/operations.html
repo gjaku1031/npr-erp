@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page('작업 기록', ~{::main})}">
+<body>
+<main class="stack" th:with="base=${ctx.path('/storage')}">
+  <div class="page-head">
+    <div>
+      <h1>자료실 작업 기록</h1>
+      <p class="muted">파일 저장소에 닿는 작업은 먼저 여기에 기록한 뒤 실행합니다. 중간에 끊긴 작업은 실제 상태와 대조해 마무리합니다.</p>
+    </div>
+  </div>
+  <section class="card">
+    <p class="empty" th:if="${operations.isEmpty()}">기록된 작업이 없습니다.</p>
+    <div class="table-wrap" th:unless="${operations.isEmpty()}">
+      <table>
+        <thead><tr><th>시각</th><th>작업</th><th>대상</th><th>상태</th><th class="num">시도</th><th>실행한 사람</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="operation : ${operations}" th:with="status=${operation.status().name()}">
+          <td class="nowrap muted" th:text="${@fmt.dateTime(operation.createdAt())}">시각</td>
+          <td th:text="${operation.type().name()}">작업</td>
+          <td th:text="${operation.targetName()}">대상</td>
+          <td>
+            <span class="badge" th:classappend="${status == 'COMPLETED'} ? 'ok' : (${status == 'MANUAL_REVIEW' or status == 'RETRYABLE_FAILED'} ? 'bad' : 'warn')" th:text="${status}">상태</span>
+            <div class="small muted" th:if="${operation.lastErrorCode() != null}" th:text="${operation.lastErrorCode()}">오류</div>
+          </td>
+          <td class="num" th:text="${operation.attempts()}">1</td>
+          <td class="muted nowrap" th:text="${@names.of(operation.actorAccountId())}">이름</td>
+          <td class="right">
+            <form method="post" th:if="${status == 'VERIFY'}"
+                  th:action="@{${base + '/operations/' + operation.id() + '/reconcile'}}">
+              <button class="btn small">실제 상태와 맞추기</button>
+            </form>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+</body>
+</html>

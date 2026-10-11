@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 태그 칩 -->
+<span th:fragment="tag(t)" th:if="${t != null}" class="tag" th:data-color="${t.color()}"
+      th:style="${#strings.startsWith(t.color(), '#')} ? '--tag:' + ${t.color()}"><span th:text="${t.emoji()}">🗂️</span><span th:text="${t.name()}">태그</span></span>
+
+<!-- 업무 종류 배지 -->
+<span th:fragment="kind(k)" class="badge" th:classappend="${k.counsel()} ? 'info'" th:if="${k.name() != 'GENERAL'}" th:text="${k.label()}">MT</span>
+
+<!-- 완료 수 막대 -->
+<div th:fragment="progress(done, total)" class="row nowrap">
+  <div class="bar"><span th:style="'width:' + (${total} gt 0 ? ${done * 100 / total} : 0) + '%'"></span></div>
+  <span class="small muted" th:text="${done} + '/' + ${total}">0/0</span>
+</div>
+
+<!-- 일일보고 제출 상태 배지 -->
+<span th:fragment="report-state(state)" class="badge" th:classappend="${@fmt.reportTone(state)}" th:text="${@fmt.report(state)}">미제출</span>
+
+<!-- 첨부 목록. removable이면 본인 것에 삭제 버튼을 붙임 -->
+<div th:fragment="files(list, removable)" class="chips" th:if="${list != null and !list.isEmpty()}">
+  <span class="chip" th:each="file : ${list}">
+    <a th:href="@{${ctx.path('/attachments/' + file.id())}}" th:text="${file.fileName()}">파일</a>
+    <span class="muted" th:text="${@fmt.size(file.sizeBytes())}">1 KB</span>
+    <form class="inline" th:if="${removable and file.ownerAccountId() == ctx.accountId()}" method="post"
+          th:action="@{${ctx.path('/attachments/' + file.id() + '/delete')}}" data-confirm="첨부를 지울까요?">
+      <button class="btn small danger">삭제</button>
+    </form>
+  </span>
+</div>
+
+<!-- 출결표 -->
+<div th:fragment="sheet(sheet)" class="stack">
+  <div class="row">
+    <span class="badge ok" th:text="'출석 ' + ${sheet.present()}">출석</span>
+    <span class="badge warn" th:text="'지각·조퇴 ' + ${sheet.partial()}">지각</span>
+    <span class="badge bad" th:text="'결석 ' + ${sheet.absent()}">결석</span>
+    <span class="small muted" th:if="${sheet.weeklyTestDate() != null}"
+          th:text="'성적: ' + ${@fmt.date(sheet.weeklyTestDate())} + ' 주간테스트'">성적 기준</span>
+    <span class="small muted" th:if="${sheet.weeklyTestDate() == null}">주간테스트 시행일이 정해지지 않아 성적을 보여 주지 않습니다.</span>
+  </div>
+  <p class="empty" th:if="${sheet.rows().isEmpty()}">이 날짜에는 수업 기록이 없습니다.</p>
+  <div class="table-wrap" th:unless="${sheet.rows().isEmpty()}">
+    <table>
+      <thead><tr><th>학생</th><th>학교</th><th>연락처</th><th>출결</th><th>선행</th><th>심화</th><th class="num">주간테스트</th><th>지도 의견</th></tr></thead>
+      <tbody>
+      <tr th:each="row : ${sheet.rows()}">
+        <td th:text="${row.studentName()}">학생</td>
+        <td class="muted" th:text="${row.school()}">학교</td>
+        <td class="muted nowrap" th:text="${row.motherPhone()}">연락처</td>
+        <td><span class="badge" th:classappend="${row.tone().name() == 'GOOD'} ? 'ok' : (${row.tone().name() == 'WARN'} ? 'warn' : 'bad')" th:text="${row.status()}">출석</span></td>
+        <td><span class="badge" th:classappend="${row.advance().name() == 'C'} ? 'bad' : (${row.advance().name() == 'B'} ? 'warn')" th:text="${row.advance().name() == 'NONE'} ? '미입력' : ${row.advance().name()}">A</span></td>
+        <td><span class="badge" th:classappend="${row.deep().name() == 'C'} ? 'bad' : (${row.deep().name() == 'B'} ? 'warn')" th:text="${row.deep().name() == 'NONE'} ? '미입력' : ${row.deep().name()}">A</span></td>
+        <td class="num">
+          <th:block th:if="${row.score() != null}">
+            <strong th:style="${row.lowScore()} ? 'color:var(--bad)'" th:text="${row.score().total()}">80</strong>
+            <span class="small muted" th:text="${row.score().rank()} + '/' + ${row.score().examinees()}">3/12</span>
+          </th:block>
+        </td>
+        <td class="small muted" th:text="${row.score() != null} ? ${row.score().comment()}">의견</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(${task == null} ? '새 업무' : '업무 수정', ~{::main})}">
+<body>
+<main class="stack" th:with="editing=${task != null}">
+  <div class="page-head">
+    <div>
+      <div class="crumbs"><a th:href="@{${ctx.path('/tasks')}}">업무</a><span class="sep">/</span></div>
+      <h1 th:text="${editing} ? '업무 수정' : '새 업무'">새 업무</h1>
+    </div>
+  </div>
+
+  <form class="card form" method="post" th:action="${editing} ? @{${ctx.path('/tasks/' + task.id())}} : @{${ctx.path('/tasks')}}">
+    <label>업무 이름 <input name="title" maxlength="200" required th:value="${editing} ? ${task.title()}"></label>
+    <div class="two">
+      <label>종류
+        <select name="kind" th:if="${!editing}">
+          <option th:each="kind : ${kinds}" th:value="${kind.name()}" th:text="${kind.label()}">일반</option>
+        </select>
+        <th:block th:if="${editing}">
+          <input type="hidden" name="kind" th:value="${task.kind().name()}">
+          <input disabled th:value="${task.kind().label()}">
+        </th:block>
+      </label>
+      <label>태그
+        <select name="tagId">
+          <option th:each="tag : ${tags}" th:value="${tag.id()}" th:text="${tag.emoji()} + ' ' + ${tag.name()}"
+                  th:selected="${editing and task.tag() != null and task.tag().id() == tag.id()}">태그</option>
+        </select>
+      </label>
+    </div>
+    <p class="small muted">상담 업무는 고른 태그와 상관없이 상담 태그가 붙습니다. 특강상담은 만드는 순간의 담당자와 특강 반 학생 명단이 고정됩니다.</p>
+    <div class="two">
+      <label>시작일 <input type="date" name="startDate" required th:value="${startDate}"></label>
+      <label>마감일 <input type="date" name="dueDate" required th:value="${dueDate}"></label>
+    </div>
+    <label>내용 <span class="small muted">굵게(**글자**), 목록(- 항목), 링크를 쓸 수 있습니다.</span>
+      <textarea name="description" maxlength="8000" th:text="${editing} ? ${task.description()}"></textarea>
+    </label>
+
+    <fieldset th:with="special=${editing and task.kind().name() == 'SPECIAL_COUNSEL'}">
+      <legend>담당자</legend>
+      <p class="small muted" th:if="${special}">특강상담의 담당자는 바꿀 수 없습니다.</p>
+      <label class="check"><input type="checkbox" name="assignAll" value="true" data-toggle-target="#assignees"
+                                  th:checked="${!editing or task.assignAll()}" th:disabled="${special}"> 업무를 받는 사람 전원</label>
+      <fieldset id="assignees" th:disabled="${!editing or task.assignAll() or special}">
+        <legend>골라서 배정</legend>
+        <div class="chips">
+          <label class="check" th:each="candidate : ${candidates}">
+            <input type="checkbox" name="assigneeIds" th:value="${candidate}"
+                   th:checked="${editing and task.progressOf(candidate).isPresent() and !task.assignAll()}">
+            <span th:text="${@names.of(candidate)}">이름</span>
+          </label>
+        </div>
+      </fieldset>
+      <p class="small muted">후보는 지금 업무 수행 권한을 가진 사람입니다. 역할이 바뀌면 전원 배정 업무의 담당자도 함께 바뀝니다.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>완료 조건 (일반 업무)</legend>
+      <label class="check"><input type="checkbox" name="reportRequired" value="true" th:checked="${editing and task.reportRequired()}"> 텍스트 보고가 있어야 완료</label>
+      <label class="check"><input type="checkbox" name="attachmentRequired" value="true" th:checked="${editing and task.attachmentRequired()}"> 첨부 파일이 있어야 완료</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>참고 링크</legend>
+      <div class="two" th:each="link : ${editing} ? ${task.links()} : ${null}">
+        <input name="linkLabel" placeholder="이름" th:value="${link.label()}">
+        <input name="linkUrl" type="url" placeholder="https://" th:value="${link.url()}">
+      </div>
+      <div class="two" th:each="index : ${#numbers.sequence(1, 2)}">
+        <input name="linkLabel" placeholder="이름">
+        <input name="linkUrl" type="url" placeholder="https://">
+      </div>
+    </fieldset>
+
+    <div class="actions">
+      <a class="btn" th:href="${editing} ? @{${ctx.path('/tasks/' + task.id())}} : @{${ctx.path('/tasks')}}">취소</a>
+      <button class="btn primary" th:text="${editing} ? '저장' : '만들기'">만들기</button>
+    </div>
+  </form>
+</main>
+</body>
+</html>

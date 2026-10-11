@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page('담당 반·태그', ~{::main})}">
+<body>
+<main class="stack" th:with="base=${ctx.path('/staff')}">
+  <div class="page-head">
+    <div>
+      <h1>담당 반·태그</h1>
+      <p class="muted">계정을 만들고 역할을 주는 일은 <a th:href="@{${ctx.path('/access/members')}}">권한 › 직원</a>에서 합니다.</p>
+    </div>
+  </div>
+
+  <section class="card">
+    <h2>담당 반</h2>
+    <p class="empty" th:if="${staff.isEmpty()}">업무를 받거나 일일보고를 쓰는 사람이 없습니다.</p>
+    <div class="table-wrap" th:unless="${staff.isEmpty()}">
+      <table>
+        <thead><tr><th>이름</th><th>외부 시스템 직원</th><th>월수금</th><th>화목토</th><th>특강</th><th>오늘 보고</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="person : ${staff}" th:with="action=${base + '/' + person.accountId()}">
+          <td class="nowrap" th:text="${@names.of(person.accountId())}">이름</td>
+          <td>
+            <form class="row nowrap" method="post" th:action="@{${action}}">
+              <select name="staffCode" style="width:auto">
+                <option value="">연결 안 함</option>
+                <option th:each="tng : ${tngStaff}" th:value="${tng.code()}" th:text="${tng.name()} + ' (' + ${tng.code()} + ')'"
+                        th:selected="${tng.code() == person.tngStaffCode()}">직원</option>
+              </select>
+              <button class="btn small" name="action" value="link">연결</button>
+            </form>
+          </td>
+          <td><div class="chips"><span class="chip" th:each="classroom : ${person.classrooms()}"
+                    th:if="${classroom.kind().name() == 'REGULAR' and classroom.dayGroup().name() == 'MWF'}" th:text="${classroom.name()}">반</span></div></td>
+          <td><div class="chips"><span class="chip" th:each="classroom : ${person.classrooms()}"
+                    th:if="${classroom.kind().name() == 'REGULAR' and classroom.dayGroup().name() == 'TTS'}" th:text="${classroom.name()}">반</span></div></td>
+          <td><div class="chips"><span class="chip" th:each="classroom : ${person.classrooms()}"
+                    th:if="${classroom.kind().name() == 'SPECIAL'}" th:text="${classroom.name()}">반</span></div></td>
+          <td>
+            <th:block th:if="${reportStates.containsKey(person.accountId())}">
+              <span th:replace="~{parts :: report-state(${reportStates.get(person.accountId())})}"></span>
+            </th:block>
+            <span class="small muted" th:unless="${reportStates.containsKey(person.accountId())}">대상 아님</span>
+          </td>
+          <td class="right">
+            <form class="inline" method="post" th:if="${person.tngStaffCode() != null}" th:action="@{${action}}">
+              <button class="btn small" name="action" value="sync">반 다시 가져오기</button>
+            </form>
+            <div class="small muted" th:if="${person.classroomsSyncedAt() != null}" th:text="${@fmt.dateTime(person.classroomsSyncedAt())}">시각</div>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card stack" id="tags">
+    <h2>태그</h2>
+    <div class="acl-row" th:each="tag : ${tags}">
+      <form class="row grow" method="post" th:action="@{${base + '/tags/' + tag.id()}}">
+        <span th:replace="~{parts :: tag(${tag})}"></span>
+        <span class="badge" th:if="${tag.fixed()}">🔒 고정</span>
+        <input name="name" maxlength="40" required th:value="${tag.name()}" th:readonly="${tag.fixed()}" style="width:120px">
+        <input name="emoji" maxlength="16" required th:value="${tag.emoji()}" style="width:64px">
+        <input name="color" maxlength="20" required th:value="${tag.color()}" style="width:110px" placeholder="olive / #336699">
+        <button class="btn small" name="action" value="update">저장</button>
+        <button class="btn small danger" name="action" value="delete" th:if="${!tag.fixed()}" formnovalidate>삭제</button>
+      </form>
+    </div>
+    <form class="row" method="post" th:action="@{${base + '/tags'}}">
+      <input name="name" maxlength="40" required placeholder="새 태그 이름" style="width:160px">
+      <input name="emoji" maxlength="16" required placeholder="이모지" style="width:80px">
+      <select name="color" style="width:auto">
+        <option value="olive">올리브</option><option value="blue">블루</option><option value="yellow">옐로</option>
+      </select>
+      <button class="btn">추가</button>
+    </form>
+    <p class="small muted">상담 태그는 상담 업무가 쓰는 고정 태그여서 이름을 바꾸거나 지울 수 없습니다. 태그를 지우면 그 태그를 쓰던 업무는 행정 태그로 옮겨집니다.</p>
+  </section>
+</main>
+</body>
+</html>

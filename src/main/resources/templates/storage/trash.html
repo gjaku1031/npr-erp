@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page('휴지통', ~{::main})}">
+<body>
+<main class="stack" th:with="base=${ctx.path('/storage')}">
+  <div class="page-head"><h1>휴지통</h1></div>
+  <section class="card">
+    <p class="empty" th:if="${trashed.isEmpty()}">휴지통이 비어 있습니다.</p>
+    <div class="table-wrap" th:unless="${trashed.isEmpty()}">
+      <table>
+        <thead><tr><th>이름</th><th class="num">크기</th><th>버린 시각</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="node : ${trashed}">
+          <td><div class="file-name"><span class="icon" th:text="${node.folder()} ? '📁' : '📄'">📄</span><span th:text="${node.name()}">이름</span></div></td>
+          <td class="num muted" th:text="${@fmt.size(node.sizeBytes())}">크기</td>
+          <td class="muted" th:text="${@fmt.dateTime(node.trashedAt())}">시각</td>
+          <td class="right">
+            <form class="inline" method="post" th:if="${restorable.contains(node.id())}" th:action="@{${base + '/n/' + node.id() + '/restore'}}">
+              <button class="btn small">되살리기</button>
+            </form>
+            <form class="inline" method="post" th:if="${deletable.contains(node.id())}" th:action="@{${base + '/n/' + node.id() + '/delete'}}"
+                  data-confirm="영구 삭제하면 되돌릴 수 없습니다. 계속할까요?">
+              <button class="btn small danger">영구 삭제</button>
+            </form>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+</body>
+</html>

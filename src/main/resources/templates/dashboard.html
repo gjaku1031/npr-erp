@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page('홈', ~{::main})}">
+<body>
+<main class="stack">
+  <div class="page-head">
+    <div>
+      <p class="muted" th:text="${@fmt.date(today)}">오늘</p>
+      <h1 th:text="${ctx.account().displayName()} + '님, 안녕하세요'">안녕하세요</h1>
+    </div>
+  </div>
+
+  <div class="tiles">
+    <div class="tile" th:if="${teamTasks != null}">
+      <div class="label">진행 중인 업무</div>
+      <div class="value" th:text="${teamTasks.size()}">0</div>
+      <div class="hint" th:text="'마감 임박 ' + ${teamDueSoon.size()} + '건'">마감 임박</div>
+    </div>
+    <div class="tile" th:if="${board != null}">
+      <div class="label">오늘 일일보고 제출</div>
+      <div class="value" th:text="${board.size() - boardMissing} + '/' + ${board.size()}">0/0</div>
+      <div class="hint" th:text="'미제출 ' + ${boardMissing} + '명 · 확인 대기 ' + ${boardWaiting} + '명'">현황</div>
+    </div>
+    <div class="tile" th:if="${myTasks != null}">
+      <div class="label">내 남은 업무</div>
+      <div class="value" th:text="${myTasks.size()}">0</div>
+      <div class="hint" th:text="'마감 임박 ' + ${myDueSoon.size()} + '건'">마감 임박</div>
+    </div>
+    <div class="tile" th:if="${myReportState != null}">
+      <div class="label">오늘 내 일일보고</div>
+      <div class="value" th:text="${@fmt.report(myReportState)}">미제출</div>
+      <div class="hint">
+        <a th:if="${journalReady}" th:href="@{${ctx.path('/reports/' + today)}}">작성 화면 열기</a>
+        <span th:unless="${journalReady}">오늘 일일보고가 아직 만들어지지 않았습니다</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <section class="card" th:if="${teamTasks != null}">
+      <h2>업무 진행 <a class="small" th:href="@{${ctx.path('/tasks')}}">전체 보기</a></h2>
+      <p class="empty" th:if="${teamTasks.isEmpty()}">진행 중인 업무가 없습니다.</p>
+      <table th:unless="${teamTasks.isEmpty()}">
+        <tr th:each="task : ${teamTasks}">
+          <td><a th:href="@{${ctx.path('/tasks/' + task.id())}}" th:text="${task.title()}">업무</a>
+            <span th:replace="~{parts :: kind(${task.kind()})}"></span></td>
+          <td class="nowrap small muted" th:text="${@fmt.dday(task.daysLeft(today))}">D-1</td>
+          <td><div th:replace="~{parts :: progress(${task.doneCount()}, ${task.assigneeCount()})}"></div></td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="card" th:if="${board != null}">
+      <h2>오늘 제출 현황 <a class="small" th:href="@{${ctx.path('/journals')}}">일일보고 관리</a></h2>
+      <p class="empty" th:if="${board.isEmpty()}">일일보고를 쓰는 사람이 없습니다.</p>
+      <div class="chips">
+        <span th:each="entry : ${board}" class="row">
+          <span th:text="${@names.of(entry.accountId())}">이름</span>
+          <span th:replace="~{parts :: report-state(${entry.state()})}"></span>
+        </span>
+      </div>
+    </section>
+
+    <section class="card" th:if="${myTasks != null}">
+      <h2>내 업무 <a class="small" th:href="@{${ctx.path('/tasks')}(view='mine')}">전체 보기</a></h2>
+      <p class="empty" th:if="${myTasks.isEmpty()}">남은 업무가 없습니다.</p>
+      <table th:unless="${myTasks.isEmpty()}">
+        <tr th:each="task : ${myTasks}">
+          <td><span th:replace="~{parts :: tag(${task.tag()})}"></span></td>
+          <td><a th:href="@{${ctx.path('/tasks/' + task.id())}}" th:text="${task.title()}">업무</a>
+            <span th:replace="~{parts :: kind(${task.kind()})}"></span></td>
+          <td class="nowrap"><span class="badge" th:classappend="${task.daysLeft(today) le 2} ? 'warn'" th:text="${@fmt.dday(task.daysLeft(today))}">D-1</span></td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="card" th:if="${upcoming != null}">
+      <h2>다가오는 일정 <a class="small" th:href="@{${ctx.path('/calendar')}}">캘린더</a></h2>
+      <p class="empty" th:if="${upcoming.isEmpty()}">2주 안에 잡힌 일정이 없습니다.</p>
+      <table th:unless="${upcoming.isEmpty()}">
+        <tr th:each="event : ${upcoming}">
+          <td class="nowrap muted" th:text="${@fmt.date(event.startDate())}">날짜</td>
+          <td th:text="${event.title()}">일정</td>
+          <td><span class="badge" th:classappend="${event.kind().name() == 'TEAM'} ? 'warn' : 'info'" th:text="${event.kind().name() == 'TEAM'} ? '팀' : '개인'">팀</span></td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="card" th:if="${notices != null}">
+      <h2>노출 중인 공지 <a class="small" th:href="@{${ctx.path('/notices')}}">공지 관리</a></h2>
+      <p class="empty" th:if="${notices.isEmpty()}">노출 중인 공지가 없습니다.</p>
+      <div class="stack">
+        <div class="markdown" th:each="notice : ${notices}" th:with="html=${@markdown.block(notice.body())}" th:utext="${html}">공지</div>
+      </div>
+    </section>
+  </div>
+</main>
+</body>
+</html>

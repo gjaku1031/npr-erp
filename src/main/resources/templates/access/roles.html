@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page('역할과 권한', ~{::main})}">
+<body>
+<main class="stack" th:with="base=${ctx.path('/access/roles')}, canManage=${ctx.can('access.role.manage')}">
+  <div class="page-head">
+    <div>
+      <h1>역할과 권한</h1>
+      <p class="muted" th:text="'역할은 이 학원이 직접 만들고 권한을 고릅니다. 권한 정책 버전 ' + ${policyVersion}">정책 버전</p>
+    </div>
+    <form class="row" method="post" th:if="${canManage}" th:action="@{${base}}">
+      <input type="hidden" name="policyVersion" th:value="${policyVersion}">
+      <input name="name" maxlength="120" required placeholder="새 역할 이름" style="width:180px">
+      <button class="btn primary">역할 만들기</button>
+    </form>
+  </div>
+
+  <section class="card stack" th:each="role : ${roles}" th:id="'role-' + ${role.id()}"
+           th:with="active=${role.status().name() == 'ACTIVE'}, action=${base + '/' + role.id()}">
+    <div class="row" style="justify-content:space-between">
+      <h2><span th:text="${role.name()}">역할</span>
+        <span class="badge" th:unless="${active}">비활성</span>
+        <span class="small muted" th:text="'권한 ' + ${role.permissions().size()} + '개'">권한 수</span></h2>
+      <span class="row" th:if="${canManage and active}">
+        <form class="row" method="post" th:action="@{${action}}">
+          <input type="hidden" name="policyVersion" th:value="${policyVersion}">
+          <input name="name" maxlength="120" required th:value="${role.name()}" style="width:150px">
+          <button class="btn small" name="action" value="rename">이름 변경</button>
+        </form>
+        <form class="inline" method="post" th:action="@{${action}}" data-confirm="비활성화하면 이 역할로 받던 권한이 모두 사라집니다. 계속할까요?">
+          <input type="hidden" name="policyVersion" th:value="${policyVersion}">
+          <button class="btn small danger" name="action" value="deactivate">비활성화</button>
+        </form>
+      </span>
+    </div>
+
+    <form class="stack" method="post" th:action="@{${action}}">
+      <input type="hidden" name="policyVersion" th:value="${policyVersion}">
+      <fieldset th:each="group : ${permissionGroups}" th:disabled="${!canManage or !active}">
+        <legend th:text="${group.key}">묶음</legend>
+        <label class="check" th:each="permission : ${group.value}">
+          <input type="checkbox" name="permissionKeys" th:value="${permission.key().value()}"
+                 th:checked="${role.permissions().contains(permission.key().value())}">
+          <span><span th:text="${permission.description()}">설명</span>
+            <code class="small muted" th:text="${permission.key().value()}">키</code>
+            <span class="badge info" th:if="${permission.resourceAction() != null}" th:text="'폴더 허용 필요: ' + ${@fmt.action(permission.resourceAction())}">폴더 허용</span></span>
+        </label>
+      </fieldset>
+      <div class="row" th:if="${canManage and active}">
+        <button class="btn" name="action" value="permissions">권한 저장</button>
+        <span class="small muted">마지막 남은 권한 관리자의 권한은 뺄 수 없습니다.</span>
+      </div>
+    </form>
+  </section>
+</main>
+</body>
+</html>

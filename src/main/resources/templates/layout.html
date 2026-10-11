@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:fragment="page(title, content)">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${title} + ' · ' + ${ctx.academyName()}">NPR ERP</title>
+  <link rel="stylesheet" th:href="@{/assets/app.css}">
+  <script th:src="@{/assets/app.js}" defer></script>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <a class="brand" th:href="@{${ctx.path('')}}"><span class="mark">N</span><span th:text="${ctx.academyName()}">학원</span></a>
+    <nav>
+      <a th:href="@{${ctx.path('')}}" th:classappend="${path == ctx.path('')} ? 'on'">홈</a>
+
+      <p class="nav-label" th:if="${ctx.canAny('worklog.task.manage', 'worklog.task.perform', 'worklog.report.write', 'worklog.calendar.use', 'worklog.notebook.write')}">업무일지</p>
+      <a th:if="${ctx.canAny('worklog.task.manage', 'worklog.task.perform')}" th:href="@{${ctx.path('/tasks')}}"
+         th:classappend="${#strings.contains(path, '/tasks')} ? 'on'">업무</a>
+      <a th:if="${ctx.can('worklog.report.write')}" th:href="@{${ctx.path('/reports')}}"
+         th:classappend="${#strings.contains(path, '/reports') and !#strings.contains(path, '/journals')} ? 'on'">일일보고</a>
+      <a th:if="${ctx.canAny('worklog.journal.manage', 'worklog.report.review')}" th:href="@{${ctx.path('/journals')}}"
+         th:classappend="${#strings.contains(path, '/journals')} ? 'on'">일일보고 관리</a>
+      <a th:if="${ctx.can('worklog.calendar.use')}" th:href="@{${ctx.path('/calendar')}}"
+         th:classappend="${#strings.contains(path, '/calendar')} ? 'on'">캘린더</a>
+      <a th:if="${ctx.canAny('worklog.notebook.write', 'worklog.selfclass.manage')}" th:href="@{${ctx.path('/classes')}}"
+         th:classappend="${#strings.contains(path, '/classes')} ? 'on'">내 반</a>
+      <a th:if="${ctx.can('worklog.notice.manage')}" th:href="@{${ctx.path('/notices')}}"
+         th:classappend="${#strings.contains(path, '/notices')} ? 'on'">공지</a>
+      <a th:if="${ctx.can('worklog.staff.manage')}" th:href="@{${ctx.path('/staff')}}"
+         th:classappend="${#strings.contains(path, '/staff')} ? 'on'">담당 반·태그</a>
+
+      <p class="nav-label" th:if="${ctx.can('storage.folder.list')}">자료실</p>
+      <a th:if="${ctx.can('storage.folder.list')}" th:href="@{${ctx.path('/storage')}}"
+         th:classappend="${#strings.contains(path, '/storage') and !#strings.contains(path, '/storage/trash') and !#strings.contains(path, '/storage/operations')} ? 'on'">파일</a>
+      <a th:if="${ctx.canAny('storage.node.modify', 'storage.node.delete')}" th:href="@{${ctx.path('/storage/trash')}}"
+         th:classappend="${#strings.contains(path, '/storage/trash')} ? 'on'">휴지통</a>
+      <a th:if="${ctx.can('storage.node.delete')}" th:href="@{${ctx.path('/storage/operations')}}"
+         th:classappend="${#strings.contains(path, '/storage/operations')} ? 'on'">작업 기록</a>
+
+      <p class="nav-label" th:if="${ctx.canAny('access.membership.read', 'access.role.read', 'access.audit.read')}">권한</p>
+      <a th:if="${ctx.can('access.membership.read')}" th:href="@{${ctx.path('/access/members')}}"
+         th:classappend="${#strings.contains(path, '/access/members')} ? 'on'">직원</a>
+      <a th:if="${ctx.can('access.role.read')}" th:href="@{${ctx.path('/access/roles')}}"
+         th:classappend="${#strings.contains(path, '/access/roles')} ? 'on'">역할과 권한</a>
+      <a th:if="${ctx.can('access.audit.read')}" th:href="@{${ctx.path('/access/audit')}}"
+         th:classappend="${#strings.contains(path, '/access/audit')} ? 'on'">감사 기록</a>
+    </nav>
+    <div class="me">
+      <div><strong th:text="${ctx.account().displayName()}">이름</strong>
+        <span class="badge info" th:if="${ctx.capabilities().superuser()}">슈퍼유저</span></div>
+      <form th:action="@{/logout}" method="post"><button>로그아웃</button></form>
+    </div>
+  </aside>
+  <div class="content">
+    <div class="banner" th:if="${banner != null and !banner.isEmpty()}">
+      <span th:each="notice : ${banner}" th:with="html=${@markdown.inline(notice.body())}" th:utext="${html}">공지</span>
+    </div>
+    <p class="flash bad" th:if="${error != null}" th:text="${error}">오류</p>
+    <th:block th:replace="${content}"/>
+  </div>
+</div>
+</body>
+</html>

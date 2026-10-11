@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page(${folder.location().node().name()}, ~{::main})}">
+<body>
+<main class="stack" th:with="node=${folder.location().node()}, base=${ctx.path('/storage')}">
+  <div class="page-head">
+    <div>
+      <div class="crumbs">
+        <th:block th:each="ancestor : ${folder.location().ancestors()}">
+          <a th:href="@{${base + '/f/' + ancestor.id()}}" th:text="${ancestor.name()}">상위</a><span class="sep">/</span>
+        </th:block>
+      </div>
+      <h1 th:text="${node.name()}">폴더</h1>
+    </div>
+    <form class="row" method="get" th:action="@{${base + '/search'}}">
+      <input type="search" name="q" placeholder="이름으로 검색" required maxlength="100" style="width:200px">
+      <button class="btn">검색</button>
+    </form>
+  </div>
+
+  <div class="row" th:if="${canCreateFolder or canUpload}">
+    <form class="row" method="post" th:if="${canCreateFolder}" th:action="@{${base + '/f/' + node.id() + '/folders'}}">
+      <input name="name" placeholder="새 폴더 이름" required maxlength="255" style="width:180px">
+      <button class="btn">폴더 만들기</button>
+    </form>
+    <form class="row" method="post" enctype="multipart/form-data" th:if="${canUpload}" th:action="@{${base + '/f/' + node.id() + '/upload'}}">
+      <input type="file" name="file" required>
+      <button class="btn primary">올리기</button>
+    </form>
+  </div>
+
+  <section class="card">
+    <p class="empty" th:if="${children.isEmpty()}">볼 수 있는 항목이 없습니다.</p>
+    <div class="table-wrap" th:unless="${children.isEmpty()}">
+      <table>
+        <thead><tr><th>이름</th><th class="num">크기</th><th>올린 사람</th><th>수정</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="child : ${children}">
+          <td>
+            <div class="file-name">
+              <span class="icon" th:text="${child.folder()} ? '📁' : '📄'">📄</span>
+              <a th:if="${child.folder()}" th:href="@{${base + '/f/' + child.id()}}" th:text="${child.name()}">폴더</a>
+              <a th:if="${!child.folder() and readable.contains(child.id())}" th:href="@{${base + '/n/' + child.id() + '/download'}}" th:text="${child.name()}">파일</a>
+              <span th:if="${!child.folder() and !readable.contains(child.id())}" th:text="${child.name()}" title="읽기 권한이 없습니다">파일</span>
+              <span class="badge warn" th:if="${child.status().name() != 'ACTIVE'}" th:text="${child.status().name()}">상태</span>
+            </div>
+          </td>
+          <td class="num muted" th:text="${@fmt.size(child.sizeBytes())}">크기</td>
+          <td class="muted nowrap" th:text="${@names.of(child.createdBy())}">이름</td>
+          <td class="muted nowrap" th:text="${@fmt.dateTime(child.updatedAt())}">시각</td>
+          <td class="right">
+            <details th:if="${modifiable.contains(child.id())}">
+              <summary class="small">관리</summary>
+              <form class="row" method="post" th:action="@{${base + '/n/' + child.id()}}">
+                <input name="name" th:value="${child.name()}" maxlength="255" style="width:170px">
+                <button class="btn small" name="action" value="rename">이름 바꾸기</button>
+              </form>
+              <form class="row" method="post" th:action="@{${base + '/n/' + child.id()}}" style="margin-top:6px">
+                <select name="destinationId" style="width:170px">
+                  <option th:each="ancestor : ${folder.location().ancestors()}" th:value="${ancestor.id()}" th:text="'↑ ' + ${ancestor.name()}">상위</option>
+                  <option th:each="sibling : ${children}" th:if="${sibling.folder() and sibling.id() != child.id()}"
+                          th:value="${sibling.id()}" th:text="'→ ' + ${sibling.name()}">폴더</option>
+                </select>
+                <button class="btn small" name="action" value="move">옮기기</button>
+                <button class="btn small danger" name="action" value="trash" formnovalidate>휴지통</button>
+              </form>
+            </details>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="small muted" th:if="${hiddenCount gt 0}" style="margin-top:26px"
+       th:text="'접근 권한이 없는 항목 ' + ${hiddenCount} + '개는 보이지 않습니다.'">숨김</p>
+  </section>
+
+  <section class="card stack" id="acl" th:if="${acls != null}">
+    <h2>이 폴더의 접근 허용 목록</h2>
+    <p class="small muted">역할의 권한과 폴더의 허용이 함께 맞아야 열립니다. 올리기 권한이 있는 역할도 이 폴더에 쓰기 허용이 없으면 올릴 수 없습니다. 상위 폴더에서 하위까지 적용한 허용은 여기에 따로 보이지 않습니다.</p>
+    <p class="empty" th:if="${acls.isEmpty()}">이 폴더에 직접 걸린 허용이 없습니다.</p>
+    <div class="acl-row" th:each="acl : ${acls}">
+      <div class="row">
+        <span class="badge info" th:text="${acl.role()} ? '역할' : '개인'">역할</span>
+        <strong th:text="${acl.name()}">이름</strong>
+        <span class="chip" th:text="${@fmt.action(acl.action())}">읽기</span>
+        <span class="small muted" th:text="${acl.inherit()} ? '하위 항목까지' : '이 폴더만'">범위</span>
+      </div>
+      <form method="post" th:if="${canManageAcl}" th:action="@{${base + '/f/' + node.id() + '/acl/' + acl.id() + '/revoke'}}">
+        <input type="hidden" name="policyVersion" th:value="${aclPolicyVersion}">
+        <button class="btn small danger">회수</button>
+      </form>
+    </div>
+    <form class="row" method="post" th:if="${canManageAcl}" th:action="@{${base + '/f/' + node.id() + '/acl'}}">
+      <input type="hidden" name="policyVersion" th:value="${aclPolicyVersion}">
+      <select name="subject" required style="width:auto">
+        <option value="">대상 고르기</option>
+        <optgroup label="역할">
+          <option th:each="role : ${aclRoles}" th:value="'role:' + ${role.key}" th:text="${role.value}">역할</option>
+        </optgroup>
+        <optgroup label="개인">
+          <option th:each="member : ${aclMembers}" th:value="'account:' + ${member}" th:text="${@names.of(member)}">이름</option>
+        </optgroup>
+      </select>
+      <select name="action" style="width:auto">
+        <option th:each="action : ${aclActions}" th:value="${action.name()}" th:text="${@fmt.action(action)}">읽기</option>
+      </select>
+      <label class="check"><input type="checkbox" name="inherit" value="true" checked> 하위 항목까지</label>
+      <button class="btn">허용 추가</button>
+    </form>
+    <p class="small muted" th:if="${canManageAcl}">권한 정책이 그 사이에 바뀌었으면 요청이 거부됩니다. 화면을 새로 고친 뒤 다시 시도해 주세요.</p>
+  </section>
+</main>
+</body>
+</html>

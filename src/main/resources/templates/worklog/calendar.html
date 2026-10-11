@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page('캘린더', ~{::main})}">
+<body>
+<main class="stack" th:with="base=${ctx.path('/calendar')}">
+  <div class="page-head">
+    <div>
+      <h1 th:text="${month.getYear()} + '년 ' + ${month.getMonthValue()} + '월'">달</h1>
+    </div>
+    <div class="actions">
+      <a class="btn" th:href="@{${base}(month=${month.minusMonths(1)})}">‹ 이전</a>
+      <a class="btn" th:href="@{${base}}">오늘</a>
+      <a class="btn" th:href="@{${base}(month=${month.plusMonths(1)})}">다음 ›</a>
+    </div>
+  </div>
+
+  <div class="row small">
+    <span class="cal-bar" style="display:inline-block">업무</span>
+    <span class="cal-bar team" style="display:inline-block">팀 일정</span>
+    <span class="cal-bar personal" style="display:inline-block">개인일정</span>
+  </div>
+
+  <div class="cal">
+    <div class="cal-head"><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span><span>일</span></div>
+    <div class="cal-week" th:each="week : ${weeks}">
+      <div class="cal-days">
+        <span th:each="day : ${week.days()}" th:text="${day.getDayOfMonth()}"
+              th:classappend="(${day.getMonthValue() != month.getMonthValue()} ? 'out ' : '') + (${day == today} ? 'today' : '')">1</span>
+      </div>
+      <div class="cal-bars">
+        <a th:each="bar : ${week.bars()}" class="cal-bar" th:href="@{${bar.span().href()}}"
+           th:classappend="${bar.span().kind()} + (${bar.continuesBefore()} ? ' cut-start' : '') + (${bar.continuesAfter()} ? ' cut-end' : '')"
+           th:style="'grid-column:' + ${bar.columnStart()} + ' / ' + ${bar.columnEnd()}"
+           th:title="${bar.span().title()}"
+           th:text="${bar.span().emoji()} + ' ' + ${bar.span().title()}">일정</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <section class="card">
+      <h2>일정 추가</h2>
+      <form class="form" method="post" th:action="@{${ctx.path('/events')}}">
+        <label>종류
+          <select name="kind">
+            <option value="PERSONAL">개인일정 (나만 봄)</option>
+            <option value="TEAM" th:if="${ctx.can('worklog.event.manage')}">팀 일정 (모두 봄)</option>
+          </select>
+        </label>
+        <label>제목 <input name="title" maxlength="200" required></label>
+        <div class="two">
+          <label>시작일 <input type="date" name="startDate" required th:value="${today}"></label>
+          <label>종료일 <input type="date" name="endDate" required th:value="${today}"></label>
+        </div>
+        <label th:if="${ctx.can('worklog.event.manage')}">태그 (팀 일정)
+          <select name="tagId">
+            <option value="">없음</option>
+            <option th:each="tag : ${tags}" th:value="${tag.id()}" th:text="${tag.emoji()} + ' ' + ${tag.name()}">태그</option>
+          </select>
+        </label>
+        <label>메모 <textarea name="memo" maxlength="4000"></textarea></label>
+        <div class="actions">
+          <a class="btn" th:if="${ctx.can('worklog.task.manage')}" th:href="@{${ctx.path('/tasks/new')}}">업무로 만들기</a>
+          <button class="btn primary">추가</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card stack">
+      <h2>이 달의 일정</h2>
+      <p class="empty" th:if="${events.isEmpty()}">일정이 없습니다.</p>
+      <details class="check-item" th:each="event : ${events}" th:id="'event-' + ${event.id()}"
+               th:with="team=${event.kind().name() == 'TEAM'}, mine=${event.ownerAccountId() == ctx.accountId()}">
+        <summary>
+          <span th:text="${event.title()}">일정</span>
+          <span class="badge" th:classappend="${team} ? 'warn' : 'info'" th:text="${team} ? '팀' : '개인'">팀</span>
+          <span class="small muted" th:text="${@fmt.shortDate(event.startDate())} + ' ~ ' + ${@fmt.shortDate(event.endDate())}">기간</span>
+        </summary>
+        <div class="row"><span th:replace="~{parts :: tag(${event.tag()})}"></span></div>
+        <pre class="report" th:if="${!#strings.isEmpty(event.memo())}" th:text="${event.memo()}">메모</pre>
+        <form class="form" method="post" th:if="${(team and ctx.can('worklog.event.manage')) or (!team and mine)}"
+              th:action="@{${ctx.path('/events/' + event.id())}}">
+          <label>제목 <input name="title" maxlength="200" required th:value="${event.title()}"></label>
+          <div class="two">
+            <label>시작일 <input type="date" name="startDate" required th:value="${event.startDate()}"></label>
+            <label>종료일 <input type="date" name="endDate" required th:value="${event.endDate()}"></label>
+          </div>
+          <label th:if="${team}">태그
+            <select name="tagId">
+              <option value="">없음</option>
+              <option th:each="tag : ${tags}" th:value="${tag.id()}" th:text="${tag.emoji()} + ' ' + ${tag.name()}"
+                      th:selected="${event.tag() != null and event.tag().id() == tag.id()}">태그</option>
+            </select>
+          </label>
+          <label>메모 <textarea name="memo" maxlength="4000" th:text="${event.memo()}"></textarea></label>
+          <div class="actions">
+            <button class="btn danger" name="action" value="delete" formnovalidate>삭제</button>
+            <button class="btn" name="action" value="update">저장</button>
+          </div>
+        </form>
+      </details>
+    </section>
+  </div>
+</main>
+</body>
+</html>

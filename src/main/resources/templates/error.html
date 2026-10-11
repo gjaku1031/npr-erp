@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${title != null} ? ${title} : '오류'">오류</title>
+  <link rel="stylesheet" th:href="@{/assets/app.css}">
+</head>
+<body class="center">
+<main class="auth-card">
+  <span class="badge bad" th:text="${status}">403</span>
+  <h1 th:text="${title != null} ? ${title} : '요청을 처리하지 못했습니다'">오류</h1>
+  <p class="muted" th:text="${message}">설명</p>
+  <div class="row">
+    <a class="btn" href="javascript:history.back()">이전 화면</a>
+    <a class="btn primary" th:href="@{/}">홈으로</a>
+  </div>
+</main>
+</body>
+</html>

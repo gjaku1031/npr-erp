@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page('업무', ~{::main})}">
+<body>
+<main class="stack">
+  <div class="page-head">
+    <h1>업무</h1>
+    <div class="actions" th:if="${ctx.can('worklog.task.manage')}">
+      <a class="btn primary" th:href="@{${ctx.path('/tasks/new')}}">새 업무</a>
+    </div>
+  </div>
+
+  <div class="tabs" th:with="base=${ctx.path('/tasks')}, viewParam=${showAll} ? 'all' : 'mine'">
+    <th:block th:if="${ctx.can('worklog.task.manage') and ctx.can('worklog.task.perform')}">
+      <a th:href="@{${base}(view='all', filter=${filter})}" th:classappend="${showAll} ? 'on'">전체 업무</a>
+      <a th:href="@{${base}(view='mine', filter=${filter})}" th:classappend="${!showAll} ? 'on'">내 업무</a>
+      <span class="grow"></span>
+    </th:block>
+    <a th:href="@{${base}(view=${viewParam}, filter='active')}" th:classappend="${filter == 'active'} ? 'on'">진행 중</a>
+    <a th:href="@{${base}(view=${viewParam}, filter='done')}" th:classappend="${filter == 'done'} ? 'on'">완료</a>
+    <a th:href="@{${base}(view=${viewParam}, filter='archived')}" th:classappend="${filter == 'archived'} ? 'on'">보관</a>
+  </div>
+
+  <section class="card">
+    <p class="empty" th:if="${tasks.isEmpty()}">해당하는 업무가 없습니다.</p>
+    <div class="table-wrap" th:unless="${tasks.isEmpty()}">
+      <table>
+        <thead>
+        <tr><th>태그</th><th>업무</th><th>기간</th><th>마감</th><th th:text="${showAll} ? '완료한 담당자' : '내 상태'">상태</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="task : ${tasks}">
+          <td><span th:replace="~{parts :: tag(${task.tag()})}"></span></td>
+          <td>
+            <a th:href="@{${ctx.path('/tasks/' + task.id())}}" th:text="${task.title()}">업무</a>
+            <span th:replace="~{parts :: kind(${task.kind()})}"></span>
+            <span class="badge" th:if="${task.reportRequired()}">보고 필수</span>
+            <span class="badge" th:if="${task.attachmentRequired()}">첨부 필수</span>
+          </td>
+          <td class="nowrap muted" th:text="${@fmt.shortDate(task.startDate())} + ' ~ ' + ${@fmt.shortDate(task.dueDate())}">기간</td>
+          <td class="nowrap"><span class="badge" th:classappend="${task.daysLeft(today) lt 0} ? 'bad' : (${task.daysLeft(today) le 2} ? 'warn')" th:text="${@fmt.dday(task.daysLeft(today))}">D-1</span></td>
+          <td th:if="${showAll}"><div th:replace="~{parts :: progress(${task.doneCount()}, ${task.assigneeCount()})}"></div></td>
+          <td th:unless="${showAll}" th:with="mine=${task.progressOf(ctx.accountId()).orElse(null)}">
+            <span class="badge ok" th:if="${mine != null and mine.complete()}">완료</span>
+            <span class="badge warn" th:if="${mine != null and !mine.complete() and mine.status().name() == 'UNDONE'}">진행 중</span>
+            <span class="badge" th:if="${mine != null and !mine.complete() and mine.status().name() != 'UNDONE'}">표시 전</span>
+            <span class="small muted" th:if="${mine != null and task.kind().counsel()}" th:text="'상담 ' + ${mine.counselSent()} + '/' + ${mine.counselTotal()}">상담</span>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page('일일보고 작성', ~{::main})}">
+<body>
+<main class="stack" th:with="base=${ctx.path('/reports/' + date)}, gate=${wizard.gate()}, payload=${wizard.payload()}, editable=${wizard.editable()}">
+  <div class="page-head">
+    <div>
+      <div class="crumbs"><a th:href="@{${ctx.path('/reports')}}">일일보고</a><span class="sep">/</span></div>
+      <h1 th:text="${@fmt.date(date)} + ' 일일보고'">일일보고</h1>
+    </div>
+    <div class="actions">
+      <th:block th:if="${wizard.report() != null and !editable}">
+        <span th:replace="~{parts :: report-state(${wizard.report().state()})}"></span>
+      </th:block>
+      <span class="badge info" th:if="${wizard.journal().specialPeriod()}">특강기간</span>
+    </div>
+  </div>
+
+  <p class="flash ok" th:if="${!editable}">제출한 보고입니다. 제출할 때의 내용 그대로 보여 줍니다. 고치려면 일일보고 화면에서 제출을 되돌려 주세요.</p>
+
+  <div class="wizard">
+    <aside class="card stack">
+      <div>
+        <div class="bar"><span th:style="'width:' + ${gate.doneCount() * 20} + '%'"></span></div>
+        <p class="small muted" th:text="${gate.doneCount()} + '/5 단계 완료'">0/5</p>
+      </div>
+      <nav class="steps">
+        <a th:each="name, stat : ${stepNames}" th:href="@{${base}(step=${stat.count})}" th:classappend="${stat.count == step} ? 'on'">
+          <span class="dot" th:classappend="${gate.done(stat.count)} ? 'done'" th:text="${gate.done(stat.count)} ? '✓' : ${stat.count}">1</span>
+          <span th:text="${name}">단계</span>
+        </a>
+      </nav>
+      <form method="post" th:if="${editable}" th:action="@{${base + '/submit'}}">
+        <button class="btn primary" style="width:100%" th:disabled="${!gate.complete()}">일일보고 제출</button>
+        <p class="small muted" th:unless="${gate.complete()}" th:text="'남은 단계: ' + ${#strings.listJoin(gate.openSteps(), ', ')}">남은 단계</p>
+      </form>
+    </aside>
+
+    <!-- 1단계 체크리스트 -->
+    <section class="card stack" th:if="${step == 1}">
+      <h2>1. 체크리스트</h2>
+      <p class="empty" th:if="${wizard.journal().items().isEmpty()}">오늘의 체크리스트 항목이 없습니다.</p>
+      <form class="stack" id="checklist" method="post" th:action="@{${base + '/draft'}}">
+        <input type="hidden" name="step" value="1">
+        <div class="check-item" th:each="item : ${wizard.journal().items()}" th:with="answer=${payload.answerOf(item.id())}">
+          <label class="check">
+            <input type="checkbox" name="checked" th:value="${item.id()}" th:checked="${answer.checked()}" th:disabled="${!editable}">
+            <strong th:text="${item.text()}">항목</strong>
+            <span class="badge warn" th:if="${item.required()}">보고 필수</span>
+          </label>
+          <textarea th:name="'note_' + ${item.id()}" maxlength="2000" placeholder="확인 결과" th:text="${answer.note()}" th:disabled="${!editable}"></textarea>
+          <div th:replace="~{parts :: files(${wizard.filesOf(item.id())}, ${editable})}"></div>
+        </div>
+        <div class="row" th:if="${editable and !wizard.journal().items().isEmpty()}">
+          <button class="btn" name="next" value="1">임시저장</button>
+          <button class="btn primary" name="next" value="2">저장하고 다음</button>
+        </div>
+      </form>
+      <details th:if="${editable and !wizard.journal().items().isEmpty()}">
+        <summary>항목에 파일 첨부</summary>
+        <form class="row" method="post" enctype="multipart/form-data" th:action="@{${base + '/files'}}">
+          <select name="itemId" style="width:auto">
+            <option th:each="item : ${wizard.journal().items()}" th:value="${item.id()}" th:text="${item.text()}">항목</option>
+          </select>
+          <input type="file" name="file" required>
+          <button class="btn">첨부</button>
+          <span class="small muted">4MB까지. 적어 둔 확인 결과는 먼저 임시저장해 주세요.</span>
+        </form>
+      </details>
+    </section>
+
+    <!-- 2단계 알림장 -->
+    <section class="card stack" th:if="${step == 2}">
+      <h2>2. 알림장</h2>
+      <p class="empty" th:if="${wizard.classrooms().isEmpty()}">오늘 처리할 담당 반이 없습니다. 이 단계는 완료로 봅니다.</p>
+      <div class="check-item" th:each="mark : ${wizard.notebooks()}">
+        <div class="row">
+          <strong th:text="${mark.className()}">반</strong>
+          <span class="badge ok" th:if="${mark.written()}">게시함</span>
+          <span class="badge" th:unless="${mark.written()}">게시 전</span>
+          <span class="muted" th:if="${mark.written()}" th:text="${mark.title()}">제목</span>
+        </div>
+        <details th:if="${editable}">
+          <summary th:text="${mark.written()} ? '다시 게시' : '알림장 쓰기'">알림장 쓰기</summary>
+          <form class="form" method="post" th:action="@{${base + '/notebook'}}">
+            <input type="hidden" name="classCode" th:value="${mark.classCode()}">
+            <label>제목 <input name="title" maxlength="200" required th:value="${mark.title()}"></label>
+            <label>내용 <textarea name="body" maxlength="8000" required></textarea></label>
+            <div class="actions"><button class="btn primary">외부 시스템에 게시</button></div>
+          </form>
+        </details>
+      </div>
+      <div class="row"><a class="btn" th:href="@{${base}(step=3)}">다음</a></div>
+    </section>
+
+    <!-- 3단계 상담 확인 -->
+    <section class="card stack" th:if="${step == 3}">
+      <h2>3. 상담 확인 <a class="btn small" th:href="@{${base}(step=3)}">↻ 다시 가져오기</a></h2>
+      <p class="empty" th:if="${counselRecords.isEmpty()}">이 날짜에 남긴 상담 기록이 없습니다.</p>
+      <div class="table-wrap" th:unless="${counselRecords.isEmpty()}">
+        <table>
+          <thead><tr><th>학생</th><th>주제</th><th>내용</th></tr></thead>
+          <tbody>
+          <tr th:each="record : ${counselRecords}">
+            <td class="nowrap" th:text="${record.studentName()}">학생</td>
+            <td th:text="${record.topic()}">주제</td>
+            <td th:text="${record.content()}">내용</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <form class="row" method="post" th:action="@{${base + '/draft'}}">
+        <input type="hidden" name="step" value="3"><input type="hidden" name="next" value="4">
+        <label class="check"><input type="checkbox" name="confirmed" value="true" th:checked="${payload.counselChecked()}" th:disabled="${!editable}"> 오늘 상담 내용을 모두 확인했습니다</label>
+        <button class="btn primary" th:if="${editable}">저장하고 다음</button>
+      </form>
+    </section>
+
+    <!-- 4단계 출결 확인 -->
+    <section class="card stack" th:if="${step == 4}">
+      <h2>4. 출결 확인</h2>
+      <p class="empty" th:if="${wizard.classrooms().isEmpty()}">오늘 처리할 담당 반이 없습니다.</p>
+      <div class="tabs" th:unless="${wizard.classrooms().isEmpty()}">
+        <a th:each="classroom : ${wizard.classrooms()}" th:href="@{${base}(step=4, class=${classroom.code()})}"
+           th:classappend="${selectedClass != null and selectedClass.code() == classroom.code()} ? 'on'" th:text="${classroom.name()}">반</a>
+      </div>
+      <th:block th:if="${sheet != null}"><div th:replace="~{parts :: sheet(${sheet})}"></div></th:block>
+      <form class="row" method="post" th:action="@{${base + '/draft'}}">
+        <input type="hidden" name="step" value="4"><input type="hidden" name="next" value="5">
+        <label class="check"><input type="checkbox" name="confirmed" value="true" th:checked="${payload.attendanceChecked()}" th:disabled="${!editable}"> 오늘 담당 반의 출결 기록을 모두 확인했습니다</label>
+        <button class="btn primary" th:if="${editable}">저장하고 다음</button>
+      </form>
+    </section>
+
+    <!-- 5단계 업무 확인 -->
+    <section class="card stack" th:if="${step == 5}">
+      <h2>5. 업무 확인</h2>
+
+      <!-- 제출한 보고는 그때 적어 둔 상태를 보여 줌 -->
+      <th:block th:if="${!editable}">
+        <p class="empty" th:if="${payload.tasks().isEmpty()}">제출할 때 기간에 든 업무가 없었습니다.</p>
+        <table th:unless="${payload.tasks().isEmpty()}">
+          <tr th:each="mark : ${payload.tasks()}">
+            <td th:text="${mark.title()}">업무</td>
+            <td><span class="badge" th:text="${mark.kind().label()}">일반</span></td>
+            <td>
+              <span class="badge ok" th:if="${mark.status().name() == 'DONE'}">완료</span>
+              <span class="badge warn" th:if="${mark.status().name() == 'UNDONE'}">미완료</span>
+              <span class="badge" th:if="${mark.status().name() == 'NONE'}">표시 없음</span>
+            </td>
+          </tr>
+        </table>
+      </th:block>
+
+      <th:block th:if="${editable}">
+        <p class="small muted">오늘이 기간에 드는 업무입니다. 일반 업무는 완료나 미완료로 표시해야 제출할 수 있습니다.</p>
+        <p class="empty" th:if="${wizard.tasks().isEmpty()}">오늘 기간에 든 업무가 없습니다.</p>
+        <div class="check-item" th:each="task : ${wizard.tasks()}" th:with="mine=${task.progressOf(ctx.accountId()).orElse(null)}, taskBase=${ctx.path('/tasks/' + task.id())}">
+          <div class="row">
+            <span th:replace="~{parts :: tag(${task.tag()})}"></span>
+            <a th:href="@{${taskBase}}" th:text="${task.title()}"><strong>업무</strong></a>
+            <span th:replace="~{parts :: kind(${task.kind()})}"></span>
+            <span class="badge" th:classappend="${task.daysLeft(date) le 2} ? 'warn'" th:text="${@fmt.dday(task.daysLeft(date))}">D-1</span>
+          </div>
+          <div class="row" th:if="${task.kind().name() == 'GENERAL'}">
+            <form class="inline" method="post" th:action="@{${taskBase + '/status'}}">
+              <input type="hidden" name="done" value="true">
+              <button class="btn small" th:classappend="${mine.status().name() == 'DONE'} ? 'on'">✓ 완료</button>
+            </form>
+            <form class="inline" method="post" th:action="@{${taskBase + '/status'}}">
+              <input type="hidden" name="done" value="false">
+              <button class="btn small" th:classappend="${mine.status().name() == 'UNDONE'} ? 'on'">✕ 미완료</button>
+            </form>
+            <span class="small muted" th:if="${task.reportRequired() or task.attachmentRequired()}">완료 조건(보고·첨부)은 업무 화면에서 채웁니다.</span>
+          </div>
+          <div class="row" th:if="${task.kind().name() == 'MT'}">
+            <form class="inline" method="post" th:action="@{${taskBase + '/mt'}}">
+              <input type="hidden" name="part" value="MWF"><input type="hidden" name="done" th:value="${!mine.mwfDone()}">
+              <button class="btn small" th:classappend="${mine.mwfDone()} ? 'on'">월수금</button>
+            </form>
+            <form class="inline" method="post" th:action="@{${taskBase + '/mt'}}">
+              <input type="hidden" name="part" value="TTS"><input type="hidden" name="done" th:value="${!mine.ttsDone()}">
+              <button class="btn small" th:classappend="${mine.ttsDone()} ? 'on'">화목토</button>
+            </form>
+          </div>
+          <p class="small muted" th:if="${task.kind().counsel()}"
+             th:text="'상담 ' + ${mine.counselSent()} + '/' + ${mine.counselTotal()} + ' · 업무 화면에서 작성하고 보냅니다.'">상담</p>
+        </div>
+      </th:block>
+    </section>
+  </div>
+</main>
+</body>
+</html>

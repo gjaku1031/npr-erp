@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>로그인 · NPR ERP</title>
+  <link rel="stylesheet" th:href="@{/assets/app.css}">
+</head>
+<body class="center">
+<main class="auth-card">
+  <div class="brand"><span class="mark">N</span><span>NPR ERP</span></div>
+  <p class="muted">학원 운영을 위한 사내 시스템입니다.</p>
+  <p class="flash bad" th:if="${param.error}">아이디 또는 비밀번호가 맞지 않습니다.</p>
+  <p class="flash ok" th:if="${param.logout}">로그아웃했습니다.</p>
+  <form class="form" th:action="@{/login}" method="post">
+    <label>아이디 <input name="username" autocomplete="username" required autofocus></label>
+    <label>비밀번호 <input type="password" name="password" autocomplete="current-password" required></label>
+    <button class="btn primary">로그인</button>
+  </form>
+</main>
+</body>
+</html>

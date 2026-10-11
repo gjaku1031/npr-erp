@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: page('내 반', ~{::main})}">
+<body>
+<main class="stack" th:with="base=${ctx.path('/classes')}">
+  <div class="page-head">
+    <h1>내 반</h1>
+    <div class="actions">
+      <form method="post" th:if="${ctx.can('worklog.selfclass.manage') and staff.tngStaffCode() != null}" th:action="@{${base + '/sync'}}">
+        <button class="btn">내 반 다시 가져오기</button>
+      </form>
+    </div>
+  </div>
+
+  <p class="empty card" th:if="${staff.tngStaffCode() == null}">외부 시스템 직원 코드가 연결되지 않았습니다. 팀장에게 담당 반 연결을 요청해 주세요.</p>
+  <p class="empty card" th:if="${staff.tngStaffCode() != null and staff.classrooms().isEmpty()}">가져온 담당 반이 없습니다.</p>
+
+  <section class="card stack" th:if="${selectedClass != null}">
+    <div class="tabs">
+      <a th:each="classroom : ${staff.classrooms()}" th:href="@{${base}(class=${classroom.code()}, date=${date})}"
+         th:classappend="${classroom.code() == selectedClass.code()} ? 'on'" th:text="${classroom.name()}">반</a>
+    </div>
+    <form class="row" method="get" th:action="@{${base}}">
+      <input type="hidden" name="class" th:value="${selectedClass.code()}">
+      <input type="date" name="date" th:value="${date}" style="width:auto">
+      <button class="btn">날짜 보기</button>
+      <span class="small muted" th:text="${selectedClass.dayGroup().label()} + ' 반'">요일</span>
+    </form>
+
+    <h3>알림장</h3>
+    <div class="check-item" th:if="${notebook != null}">
+      <div class="row"><span class="badge ok">게시함</span><strong th:text="${notebook.title()}">제목</strong>
+        <span class="small muted" th:text="${@fmt.dateTime(notebook.postedAt())}">시각</span></div>
+      <pre class="report" th:text="${notebook.body()}">내용</pre>
+    </div>
+    <details th:open="${notebook == null}">
+      <summary th:text="${notebook == null} ? '알림장 쓰기' : '수정해서 다시 게시'">알림장 쓰기</summary>
+      <form class="form" method="post" th:action="@{${base + '/' + selectedClass.code() + '/notebook'}}">
+        <input type="hidden" name="date" th:value="${date}">
+        <label>제목 <input name="title" maxlength="200" required th:value="${notebook != null} ? ${notebook.title()}"></label>
+        <label>내용 <textarea name="body" maxlength="8000" required th:text="${notebook != null} ? ${notebook.body()}"></textarea></label>
+        <div class="actions"><button class="btn primary">외부 시스템에 게시</button></div>
+      </form>
+    </details>
+
+    <h3>출결</h3>
+    <div th:replace="~{parts :: sheet(${sheet})}"></div>
+  </section>
+
+  <section class="card stack" th:if="${selfCounselTasks != null}">
+    <h2>개인 상담일정</h2>
+    <p class="small muted">본인 담당 반 학생을 대상으로 직접 만드는 상담일정입니다. 만든 사람만 봅니다.</p>
+    <p class="empty" th:if="${selfCounselTasks.isEmpty()}">만든 상담일정이 없습니다.</p>
+    <div class="acl-row" th:each="task : ${selfCounselTasks}" th:with="mine=${task.progressOf(ctx.accountId()).orElse(null)}">
+      <div>
+        <a th:href="@{${ctx.path('/tasks/' + task.id())}}" th:text="${task.title()}">상담일정</a>
+        <span class="small muted" th:text="${@fmt.shortDate(task.startDate())} + ' ~ ' + ${@fmt.shortDate(task.dueDate())}">기간</span>
+        <span class="badge" th:classappend="${mine != null and mine.complete()} ? 'ok'" th:if="${mine != null}"
+              th:text="'보냄 ' + ${mine.counselSent()} + '/' + ${mine.counselTotal()}">보냄</span>
+      </div>
+      <form method="post" th:action="@{${base + '/self-counsel/' + task.id() + '/delete'}}" data-confirm="상담일정과 써 둔 상담 내용을 지웁니다. 계속할까요?">
+        <button class="btn small danger">삭제</button>
+      </form>
+    </div>
+    <form class="row" method="post" th:action="@{${base + '/self-counsel'}}">
+      <input name="title" maxlength="200" required placeholder="상담일정 이름" style="width:auto;flex:1">
+      <input type="date" name="startDate" required th:value="${today}" style="width:auto">
+      <input type="date" name="dueDate" required th:value="${today.plusDays(14)}" style="width:auto">
+      <button class="btn">만들기</button>
+    </form>
+  </section>
+</main>
+</body>
+</html>
