@@ -43,12 +43,12 @@
 ## 아키텍처
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/modules-dark.png">
-  <img src="docs/images/readme/modules-light.png" alt="모듈 구성도. bootstrap이 identity, accesscontrol, worklog, storage를 호출하고, worklog는 tng 포트를 거쳐 외부 ERP에, storage는 포트를 거쳐 파일 저장소에 닿음" width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/system-dark.png">
+  <img src="docs/images/readme/system-light.png" alt="시스템 구조도. 팀장, 강사, 관리자의 화면 요청을 bootstrap이 받아 storage, identity, accesscontrol, worklog를 부르고, 모듈은 PostgreSQL과 파일 저장소를 씀. bootstrap과 worklog는 tng 포트를 거쳐 외부 ERP의 자료를 읽고 씀" width="100%">
 </picture>
 
 - **요청**: 화면 요청은 `bootstrap`의 컨트롤러가 권한 엔진(`accesscontrol`)에 물은 뒤 `storage`와 `worklog`를 부름
-- **모듈**: 업무 모듈끼리는 서로 의존하지 않고, `worklog`만 외부 ERP 포트(`tng`)를 씀
+- **모듈**: 업무 모듈끼리는 서로 의존하지 않음. 반 명단과 출결은 `tng` 포트로 외부 ERP에서 읽고, 상담과 알림장은 같은 포트로 외부 ERP에 기록함. 이 저장소에는 포트의 구현으로 가상 데이터를 돌려주는 대역이 들어 있음
 - **실행**: 애플리케이션 한 프로세스와 PostgreSQL 하나로 동작하고, 화면도 같은 프로세스가 그림
 
 구성 요소와 일관성 보장 범위는 [아키텍처](https://gjaku1031.github.io/ken-blog/post/doc-c2513d8a-31f4-49df-a99a-675fca3305a3/)에 있음.
