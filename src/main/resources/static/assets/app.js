@@ -15,3 +15,12 @@ document.addEventListener('change', (event) => {
     }
   }
 });
+
+// 고른 파일의 이름을 버튼 옆에 보여 줌
+document.addEventListener('change', (event) => {
+  if (event.target.matches('.file-pick input[type="file"]')) {
+    const name = event.target.closest('.file-pick').querySelector('.file-name');
+    const file = event.target.files[0];
+    name.textContent = file ? file.name : '고른 파일 없음';
+  }
+});

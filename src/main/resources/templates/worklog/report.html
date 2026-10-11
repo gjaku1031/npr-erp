@@ -61,7 +61,7 @@
           <select name="itemId" style="width:auto">
             <option th:each="item : ${wizard.journal().items()}" th:value="${item.id()}" th:text="${item.text()}">항목</option>
           </select>
-          <input type="file" name="file" required>
+          <label class="file-pick"><span class="btn">파일 고르기</span><span class="file-name">고른 파일 없음</span><input type="file" name="file" required></label>
           <button class="btn">첨부</button>
           <span class="small muted">4MB까지. 적어 둔 확인 결과는 먼저 임시저장해 주세요.</span>
         </form>
