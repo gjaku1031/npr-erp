@@ -1,0 +1,72 @@
+spring:
+  application:
+    name: npr-erp
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/npr_erp}
+    username: ${DATABASE_USERNAME:npr}
+    password: ${DATABASE_PASSWORD:npr-local-only}
+  flyway:
+    enabled: true
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  jooq:
+    sql-dialect: postgres
+  servlet:
+    multipart:
+      max-file-size: ${NPR_STORAGE_MAX_UPLOAD_SIZE:200MB}
+      max-request-size: ${NPR_STORAGE_MAX_UPLOAD_SIZE:200MB}
+  web:
+    locale: ko_KR
+    locale-resolver: fixed
+    resources:
+      cache:
+        period: 1h
+  mvc:
+    format:
+      # 주소와 폼의 날짜를 YYYY-MM-DD로 읽음
+      date: iso
+
+server:
+  port: ${SERVER_PORT:8080}
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      timeout: 8h
+      cookie:
+        name: NPRSESSION
+        http-only: true
+        same-site: lax
+        secure: ${SESSION_COOKIE_SECURE:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+npr:
+  storage:
+    # 파일 본문을 두는 로컬 디렉터리. 저장소 포트의 로컬 파일시스템 어댑터가 사용
+    local-root: ${NPR_STORAGE_LOCAL_ROOT:./data/storage}
+  worklog:
+    # 업무일지의 "오늘"을 고정함(YYYY-MM-DD). 비우면 한국 시간의 실제 날짜. 시연용
+    today: ${NPR_WORKLOG_TODAY:}
+  demo:
+    # true이면 빈 DB에 시연용 학원·계정·역할·업무 데이터를 넣음
+    seed: ${NPR_DEMO_SEED:false}
+    # 시연 계정이 함께 쓰는 비밀번호
+    password: ${NPR_DEMO_PASSWORD:demo-1234!}
+
+logging:
+  level:
+    # 시작할 때 찍는 jOOQ 안내 문구를 끔
+    org.jooq.Constants: WARN

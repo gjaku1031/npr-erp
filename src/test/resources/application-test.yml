@@ -1,0 +1,5 @@
+npr:
+  storage:
+    local-root: build/test-storage
+  demo:
+    seed: false
