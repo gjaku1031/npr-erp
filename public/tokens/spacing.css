@@ -1,0 +1,38 @@
+/* ===========================================================================
+   Spacing tokens — 4px base scale (matches the Tailwind steps the product uses).
+   Common rhythms: form fields space-y-4 (--space-4); grid gaps gap-4;
+   card padding p-6 (--space-6); compact/stat card p-4 (--space-4).
+   =========================================================================== */
+:root {
+  --space-0: 0;
+  --space-px: 1px;
+  --space-0-5: 0.125rem;  /* 2  */
+  --space-1: 0.25rem;     /* 4  */
+  --space-1-5: 0.375rem;  /* 6  */
+  --space-2: 0.5rem;      /* 8  */
+  --space-2-5: 0.625rem;  /* 10 */
+  --space-3: 0.75rem;     /* 12 */
+  --space-3-5: 0.875rem;  /* 14 */
+  --space-4: 1rem;        /* 16 */
+  --space-5: 1.25rem;     /* 20 */
+  --space-6: 1.5rem;      /* 24 */
+  --space-8: 2rem;        /* 32 */
+  --space-10: 2.5rem;     /* 40 */
+  --space-12: 3rem;       /* 48 */
+  --space-16: 4rem;       /* 64 */
+
+  /* Semantic rhythms */
+  --gap-field: var(--space-4);      /* space-y-4 between form fields */
+  --pad-card: var(--space-6);       /* default card padding p-6 */
+  --pad-card-compact: var(--space-4); /* stat / small card p-4 */
+  --pad-control-x: var(--space-3);  /* input px-3 */
+  --pad-control-y: var(--space-2);  /* input py-2 */
+  --section-gap: var(--space-6);    /* mb-6 between sections */
+
+  /* Content widths the product uses */
+  --width-sidebar: 280px;
+  --width-content: 72rem;   /* max-w-6xl admin content */
+  --width-form: 32rem;      /* max-w-lg form column */
+  --width-auth: 24rem;      /* max-w-sm auth card */
+  --width-phone: 390px;     /* mobile frame */
+}

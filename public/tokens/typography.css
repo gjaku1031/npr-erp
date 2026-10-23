@@ -1,0 +1,30 @@
+/* ===========================================================================
+   Typography tokens — Noto Sans KR (UI/Korean) + Poppins (display numerals)
+   Type scale mirrors the Tailwind steps the product uses (text-xs … text-3xl).
+   =========================================================================== */
+:root {
+  /* Families */
+  --font-sans: "Noto Sans KR", system-ui, -apple-system, sans-serif;
+  --font-heading: "Noto Sans KR", system-ui, sans-serif;
+  --font-display: "Poppins", "Noto Sans KR", sans-serif;  /* numerals / stats */
+
+  /* Weights (Noto Sans KR ships 400/500/600/700) */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Font sizes — size / line-height pairs */
+  --text-xs: 0.75rem;    --leading-xs: 1rem;      /* 12 / 16  labels, captions */
+  --text-sm: 0.875rem;   --leading-sm: 1.25rem;   /* 14 / 20  body, controls   */
+  --text-base: 1rem;     --leading-base: 1.5rem;  /* 16 / 24                    */
+  --text-lg: 1.125rem;   --leading-lg: 1.75rem;   /* 18 / 28  section title     */
+  --text-xl: 1.25rem;    --leading-xl: 1.75rem;   /* 20 / 28  card title        */
+  --text-2xl: 1.5rem;    --leading-2xl: 2rem;     /* 24 / 32  page title        */
+  --text-3xl: 1.875rem;  --leading-3xl: 2.25rem;  /* 30 / 36  stat number       */
+
+  /* Tracking — the product sets body letter-spacing to -0.01em */
+  --tracking-tight: -0.02em;
+  --tracking-body: -0.01em;
+  --tracking-wide: 0.05em;   /* uppercase stat labels */
+}

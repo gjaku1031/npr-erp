@@ -1,0 +1,33 @@
+{
+  "name": "npr-erp",
+  "version": "0.1.0",
+  "description": "NPR 업무일지(일일보고) 관리 시스템 — Next.js 풀스택 (프론트 + API 라우트 + libSQL/Turso)",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "node --test --test-concurrency=1 tests/**/*.test.cjs"
+  },
+  "dependencies": {
+    "@kfonts/nanum-gothic": "^0.2.0",
+    "exceljs": "4.4.0",
+    "jszip": "^3.10.1",
+    "libsql": "^0.5.29",
+    "next": "^14.2.35",
+    "pdfkit": "^0.19.1",
+    "pptx-automizer": "0.8.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/pdfkit": "^0.17.6",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "typescript": "^5.7.3"
+  }
+}

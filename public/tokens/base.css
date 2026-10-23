@@ -1,0 +1,29 @@
+/* ===========================================================================
+   Base — minimal element defaults so specimens, components and kits inherit the
+   brand foundations. Mirrors the product's `body` layer (bg + text + font +
+   -0.01em tracking + antialiasing). Kept intentionally small.
+   =========================================================================== */
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  letter-spacing: var(--tracking-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Poppins for numerals/display where opted in */
+.font-display {
+  font-family: var(--font-display);
+  font-feature-settings: "tnum" 1;   /* tabular numerals for stats */
+}

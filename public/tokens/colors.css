@@ -1,0 +1,107 @@
+/* ===========================================================================
+   Color tokens — NP Edu (olive-lime green brand)
+   Values copied verbatim from qr-poc/src/app/globals.css :root / .dark.
+   Use the SEMANTIC names below (--primary, --card, --success…), never raw hex.
+   Translucency = layer with color-mix or rgb() alpha, e.g. the source's
+   `bg-success/15` == color-mix(in srgb, var(--success) 15%, transparent).
+   =========================================================================== */
+:root {
+  /* — Surfaces — */
+  --background: #f6f7f4;          /* mist page background */
+  --foreground: #1c1f1e;          /* charcoal — body + headings */
+  --card: #ffffff;                /* card / panel surface */
+  --card-foreground: #1c1f1e;
+  --popover: #ffffff;
+  --popover-foreground: #1c1f1e;
+
+  /* — Brand / primary — */
+  --primary: #638402;             /* olive brand green */
+  --primary-foreground: #ffffff;
+  --secondary: #eef0ea;           /* light neutral surface */
+  --secondary-foreground: #2c3d5e;
+  --muted: #f2f3ef;               /* section-gray band */
+  --muted-foreground: #6b6f69;    /* graphite — secondary text */
+  --accent: #e9f0d2;              /* olive tint — hover / selected / badge */
+  --accent-foreground: #1e2a00;
+
+  /* — Lines & focus — */
+  --border: #e5e6e2;              /* hairline */
+  --input: #e5e6e2;               /* input border */
+  --ring: #638402;                /* focus ring = brand */
+
+  /* — Extended brand — */
+  --brand: #638402;
+  --brand-foreground: #ffffff;
+  --brand-tint: #e9f0d2;
+  --navy: #2c3d5e;                /* secondary solid buttons */
+  --navy-foreground: #ffffff;
+
+  /* — Semantic states — */
+  --destructive: #d92d20;         /* error / required */
+  --destructive-foreground: #ffffff;
+  --success: #2f9e44;             /* entry complete / confirmed */
+  --success-foreground: #ffffff;
+  --warning: #e8a33d;             /* duplicate / caution */
+  --warning-foreground: #3a2a00;
+  --info: #3a6fb0;
+  --info-foreground: #ffffff;
+  --info-bg: #dbe8fb;             /* notice callout band */
+  --info-bg-foreground: #0c2742;
+
+  /* — Chart palette — */
+  --chart-1: #638402;
+  --chart-2: #2c3d5e;
+  --chart-3: #3a6fb0;
+  --chart-4: #2f9e44;
+  --chart-5: #e8a33d;
+
+  /* — Semantic aliases (convenience) — */
+  --surface-page: var(--background);
+  --surface-card: var(--card);
+  --surface-muted: var(--muted);
+  --text-heading: var(--foreground);
+  --text-body: var(--muted-foreground);
+  --text-on-brand: var(--primary-foreground);
+  --hairline: var(--border);
+}
+
+/* Dark mode — apply `.dark` on a wrapper. Brand inverts to lime #aed456. */
+.dark {
+  --background: #1a1b1d;
+  --foreground: #f1f1f3;
+  --card: #242529;
+  --card-foreground: #f1f3ef;
+  --popover: #242529;
+  --popover-foreground: #f1f3ef;
+  --primary: #aed456;             /* lime (dark brand) */
+  --primary-foreground: #1b2400;
+  --secondary: #2d2e33;
+  --secondary-foreground: #f1f1f3;
+  --muted: #27282c;
+  --muted-foreground: #b4b5ba;
+  --accent: #2f3a18;
+  --accent-foreground: #e9f0d2;
+  --border: #35363c;
+  --input: #35363c;
+  --ring: #aed456;
+  --brand: #aed456;
+  --brand-foreground: #1b2400;
+  --brand-tint: #2f3a18;
+  --navy: #b5c6ef;
+  --navy-foreground: #0b1730;
+  --destructive: #ff6b5e;
+  --destructive-foreground: #2a0604;
+  --success: #6fd483;
+  --success-foreground: #03210b;
+  --warning: #f0c06a;
+  --warning-foreground: #2a1c00;
+  --info: #a5c8ff;
+  --info-foreground: #00284a;
+  --info-bg: #14304f;
+  --info-bg-foreground: #d4e3ff;
+  --chart-1: #aed456;
+  --chart-2: #b5c6ef;
+  --chart-3: #a5c8ff;
+  --chart-4: #6fd483;
+  --chart-5: #f0c06a;
+}

@@ -1,0 +1,16 @@
+/* ===========================================================================
+   Radius tokens — base --radius: 0.5rem (8px), scale copied from the product's
+   @theme inline block. Usage: buttons/inputs/small cards = lg; content
+   cards/panels = xl; auth & emphasis cards = 2xl; pills/avatars = full.
+   =========================================================================== */
+:root {
+  --radius: 0.5rem;                        /* 8px base */
+  --radius-sm: calc(var(--radius) - 2px);  /* 6px  */
+  --radius-md: var(--radius);              /* 8px  */
+  --radius-lg: calc(var(--radius) + 4px);  /* 12px — inputs, buttons, small cards */
+  --radius-xl: calc(var(--radius) + 8px);  /* 16px — content cards, panels        */
+  --radius-2xl: 1rem;                      /* 16px — auth / emphasis cards         */
+  --radius-3xl: 1.5rem;                    /* 24px */
+  --radius-device: 2.5rem;                 /* 40px — phone frame bezel             */
+  --radius-full: 9999px;                   /* pills, avatars, toggles              */
+}

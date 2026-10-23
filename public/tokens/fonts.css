@@ -1,0 +1,2 @@
+/* 웹폰트는 _document.tsx에서 preconnect + 직접 <link>로 로드합니다(@import 워터폴 제거).
+   이 파일은 하위호환용 빈 파일로 남겨둡니다. */

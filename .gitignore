@@ -1,0 +1,27 @@
+# 의존성 / 빌드 산출물
+node_modules/
+.next/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# 환경변수 — 실제 값은 커밋하지 않는다(.env.example 만 커밋)
+.env
+.env.*
+!.env.example
+
+# 로컬 DB
+/data/
+*.db
+
+# 배포 / 툴링
+.vercel
+
+# 로컬 생성 산출물
+outputs/
+
+# OS / 에디터
+.DS_Store
+Thumbs.db
+*.log
