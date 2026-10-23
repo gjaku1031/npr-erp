@@ -355,7 +355,6 @@
 | `notices` | `id` | `sort`(노출 순서), `active` |
 | `journals` / `journal_items` | `date` / `id` | 날짜별 체크리스트 + `journals.special_period` 생성 스냅샷 |
 | `daily_reports` | `id`, UNIQUE `(teacher, date)` | `status`, `confirmed`, `payload`(특강 여부·반 목록 스냅샷 포함) |
-| `reminders` | `(teacher, date)` | (미사용 — §6) |
 
 - 저장소는 libSQL. `TURSO_DATABASE_URL`이 있으면 Turso 임베디드 리플리카(원격이 진실), 없으면 로컬 파일 SQLite.
 - 서버리스 읽기-후-쓰기 일관성: 상태 조회 전 원격 pull, 변경 후 원격 sync.
@@ -376,17 +375,16 @@
 4. **업무 자체 첨부(`tasks.atts`)를 설정할 수 없다.** 상세 화면은 표시하지만 생성/수정 모달에 입력란이 없고 `createTask`/`updateTask` 호출에 `atts`가 실리지 않는다(시드 데이터만 값이 있다).
 5. **상담 항목 수동 완료(`counsel_entries.done`, "했음/안했음")가 화면에 없다.** API(`POST /api/counsel/entry/:id/done`)와 클라이언트 함수(`App.setCounselDone`)는 있으나 `CounselPanel` 테이블 컬럼은 학생·어머니 전화·상담 전송 3개뿐이라 호출부가 없다.
 6. **임시 비밀번호 재발급(`POST /api/teachers/:tid/reset-pw`)에 호출부가 없다.** 화면은 직접 지정 변경만 쓴다.
-7. **`reminders` 테이블은 쓰이지 않는다.** 강사 삭제 시 DELETE만 있고 INSERT/조회가 없다. 리마인드 발송 기능은 미구현이다.
-8. **캘린더에 월 이동이 없다.** `Calendar`가 `month`·`onPrev`·`onNext` props를 선언하지만 본문에서 쓰지 않는다(`CalendarCard`는 넘겨준다). 실제 동작은 주 단위 연속 무한 스크롤 + [오늘] 버튼이다.
-9. 태그 정렬(`tags.sort`) 변경 UI가 없다(공지만 드래그 재정렬 지원).
-10. 위저드 2단계 안내에 "마감일 — 다음 날로 자동 지정"이 표시되지만, 게시 요청에 실리는 `submitdate`는 일일보고 날짜다. 다음 날 마감을 전달하는 코드 경로는 확인되지 않았다.
+7. **캘린더에 월 이동이 없다.** `Calendar`가 `month`·`onPrev`·`onNext` props를 선언하지만 본문에서 쓰지 않는다(`CalendarCard`는 넘겨준다). 실제 동작은 주 단위 연속 무한 스크롤 + [오늘] 버튼이다.
+8. 태그 정렬(`tags.sort`) 변경 UI가 없다(공지만 드래그 재정렬 지원).
+9. 위저드 2단계 안내에 "마감일 — 다음 날로 자동 지정"이 표시되지만, 게시 요청에 실리는 `submitdate`는 일일보고 날짜다. 다음 날 마감을 전달하는 코드 경로는 확인되지 않았다.
 
 ### 연동 제약
-11. 공개 저장소의 외부 ERP 구현은 모의 구현뿐이다. 모의 구현은 응답 지연·세션 만료·저장 거부를 흉내 내지 않으므로, 확인 불가와 재확인 경로는 `tests/counsel-write.test.cjs`의 가짜 포트로 검증한다.
+10. 공개 저장소의 외부 ERP 구현은 모의 구현뿐이다. 모의 구현은 응답 지연·세션 만료·저장 거부를 흉내 내지 않으므로, 확인 불가와 재확인 경로는 `tests/counsel-write.test.cjs`의 가짜 포트로 검증한다.
 
 ### 기타
-12. 첨부파일은 base64 data URL로 DB(payload/`report_files`)에 인라인 저장되며 파일당 4MB로 제한된다. 별도 파일 스토리지가 없다.
-13. API 함수의 `maxDuration`은 120초다(서버리스 배포 기준). 클라이언트는 일반 요청 28초, 특강 반·상담 로스터 동기화·상담 전송은 125초에서 중단해 서버의 명확한 오류 응답을 우선 기다린다.
-14. 팀장 대시보드 공지 요약은 마크다운을 렌더하지 않고 원문을 한 줄로 자른다(`text-overflow: ellipsis`).
-15. 태그 삭제 폴백 대상이 `'행정'`으로 하드코딩돼 있다 — `행정` 태그가 삭제된 상태면 존재하지 않는 태그를 가리키게 된다.
-16. 특강 도메인과 상담 쓰기 확인 규칙은 `npm test`로 자동 검증하지만 **CI와 브라우저 E2E는 없다**. `next.config.js`가 타입/ESLint 오류를 빌드에서 무시하므로 `npx tsc --noEmit`과 빌드를 따로 돌린다.
+11. 첨부파일은 base64 data URL로 DB(payload/`report_files`)에 인라인 저장되며 파일당 4MB로 제한된다. 별도 파일 스토리지가 없다.
+12. API 함수의 `maxDuration`은 120초다(서버리스 배포 기준). 클라이언트는 일반 요청 28초, 특강 반·상담 로스터 동기화·상담 전송은 125초에서 중단해 서버의 명확한 오류 응답을 우선 기다린다.
+13. 팀장 대시보드 공지 요약은 마크다운을 렌더하지 않고 원문을 한 줄로 자른다(`text-overflow: ellipsis`).
+14. 태그 삭제 폴백 대상이 `'행정'`으로 하드코딩돼 있다 — `행정` 태그가 삭제된 상태면 존재하지 않는 태그를 가리키게 된다.
+15. 특강 도메인과 상담 쓰기 확인 규칙은 `npm test`로 자동 검증하지만 **CI와 브라우저 E2E는 없다**. `next.config.js`가 타입/ESLint 오류를 빌드에서 무시하므로 `npx tsc --noEmit`과 빌드를 따로 돌린다.

@@ -240,10 +240,4 @@ CREATE TABLE IF NOT EXISTS daily_reports (
   UNIQUE (teacher, date)
 );
 
--- 리마인드 발송 기록 (강사×날짜)
-CREATE TABLE IF NOT EXISTS reminders (
-  teacher   TEXT NOT NULL,
-  date      TEXT NOT NULL,
-  PRIMARY KEY (teacher, date)
-);
 `;

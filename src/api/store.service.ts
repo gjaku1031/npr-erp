@@ -3726,7 +3726,6 @@ export class StoreService {
       this.db.run('DELETE FROM special_class_roster WHERE teacher_tid=? OR teacher_name=?', tid, t.name);
       this.db.run('DELETE FROM task_status WHERE teacher=?', t.name);
       this.db.run('DELETE FROM daily_reports WHERE teacher=?', t.name);
-      this.db.run('DELETE FROM reminders WHERE teacher=?', t.name);
       this.db.run('DELETE FROM events WHERE owner=?', tid);
       this.db.run('DELETE FROM teachers WHERE tid=?', tid);
     });

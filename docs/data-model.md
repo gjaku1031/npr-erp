@@ -206,14 +206,6 @@ npr-notice 앱의 DB 스키마와 HTTP API 전체 목록. 모든 내용은 `` �
 
 정규반 동기화 설정도 일반 `/api/settings`로 덮어쓸 수 없다. 성공한 전체 스냅샷만 `regular_sync_*`를 갱신하고, 계정 실패·미귀속·충돌 또는 dry-run은 기존 강사 반과 기존 성공 요약을 바꾸지 않는다. 상세 요약은 팀장 상태에만 노출된다.
 
-### reminders — 리마인드 발송 기록
-
-| 컬럼 | 타입 | 의미 |
-|---|---|---|
-| `teacher` + `date` | TEXT, 복합 PK | — |
-
-**정의만 있고 실제로 쓰이지 않는 죽은 테이블이다.** 레포 전체에서 이 테이블을 참조하는 곳은 DDL(`src/db/schema.ts`)과 `deleteTeacher`의 `DELETE FROM reminders`(`src/api/store.service.ts`) 둘뿐 — INSERT/SELECT도, 리마인드 발송 라우트도, 이를 호출하는 프론트 화면도 없다(테이블명 `'리마인드'` 전역 검색 결과). "리마인드 발송 기록"이라는 설명은 DDL 주석에서 온 것이고, 발송 기능 자체가 코드에 존재하지 않는다.
-
 ### 마이그레이션 방식 (`src/db/db.service.ts`)
 
 마이그레이션 파일이나 버전 테이블 없이 **`PRAGMA table_info`로 컬럼 존재를 확인하고 없으면 `ALTER TABLE ADD COLUMN`** 하는 방식이다.
