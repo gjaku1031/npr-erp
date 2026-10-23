@@ -54,7 +54,7 @@ NPR 업무일지 앱의 환경변수, 로컬 실행(모의 ERP), 테스트, DB, 
 ```bash
 pnpm install              # 또는 npx pnpm@10 install
 cp .env.example .env.local
-# .env.local: SEED_MODE=demo, APP_TODAY=2026-07-11 (데모 데이터 기준일)
+# .env.local: SEED_MODE=demo, APP_TODAY=2026-07-10 (데모 데이터 주간의 평일)
 pnpm dev                  # http://localhost:3000
 ```
 
@@ -98,7 +98,7 @@ CI 워크플로와 브라우저 E2E는 없다.
 
 ## 4. 배포
 
-운영에서는 서버리스 함수(서울 리전)와 Turso로 배포했다. 공개 저장소에는 배포 설정 파일을 두지 않는다.
+운영에서는 Vercel 서버리스 함수와 Turso로 배포했다. 공개 저장소에는 배포 설정 파일을 두지 않는다.
 
 - API 함수 `maxDuration: 120`초(`pages/api/[[...slug]].ts`) — 긴 외부 ERP 조회(반 명단·연락처)를 위한 상한이다. 배포 플랫폼이 120초 함수를 허용해야 한다.
 - `next.config.js`의 `outputFileTracingIncludes`로 `/api/[[...slug]]`·`/api/utility/weekly-ppt` 함수에 `libsql` 네이티브 바이너리와 PPT 템플릿·글꼴을 포함시킨다. 이 설정이 빠지면 배포된 함수에서 DB 로드나 PPT 생성이 실패한다.

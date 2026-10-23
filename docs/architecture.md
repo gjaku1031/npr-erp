@@ -11,7 +11,7 @@ NPR 업무일지(일일보고) 관리 시스템의 실제 구조. 모든 내용�
 | DB 드라이버 | `libsql@^0.5.29` (better-sqlite3 호환 API) |
 | 영속 | 로컬 파일 SQLite / **Turso 임베디드 리플리카**(원격 동기화) |
 | 외부 연동 | `TttGateway` 포트 + 모의 구현(`src/ttt/ttt.mock.ts`) |
-| 런타임 | Node.js 22(`engines.node = 22.x`). 운영은 서버리스 함수로 배포했음 |
+| 런타임 | Node.js 22(`engines.node = 22.x`). 운영은 Vercel 서버리스 함수로 배포했음 |
 
 `package.json`에 프론트 상태관리 라이브러리(Redux/Zustand 등)나 CSS 프레임워크 의존성은 **없다**. 상태는 자체 구현, 스타일은 순수 CSS다.
 
