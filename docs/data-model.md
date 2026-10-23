@@ -19,7 +19,7 @@ npr-notice 앱의 DB 스키마와 HTTP API 전체 목록. 모든 내용은 `` �
 |---|---|---|
 | `tid` | TEXT PK | 로그인 아이디 |
 | `name` | TEXT | 강사 이름. **다른 테이블들이 tid가 아니라 이 이름으로 강사를 참조한다** (task_status.teacher, daily_reports.teacher, counsel_entries.teacher) |
-| `pw` | TEXT, 기본 `'1234'` | 앱 로그인 비밀번호 |
+| `pw` | TEXT | 앱 로그인 비밀번호의 scrypt 해시(`scrypt$N$r$p$salt$hash`, `src/auth/password.ts`). 해시가 아닌 값은 부팅 때 해시로 바뀐다 |
 | `classes` | TEXT(JSON), 기본 `{"월수금반":[],"화목토반":[],"특강 월수금반":[],"특강 화목토반":[]}` | 요일그룹 → 담당 반명 배열. 기존 DB의 2개 키도 부팅 시 4개 키로 정규화한다. 네 그룹 모두 읽기 전용이며, 일반 2개 그룹은 정규 반 동기화가, 특강 2개 그룹은 특강 반 동기화가 교체한다 |
 | `ttt_id` | TEXT, 기본 `''` | 강사 개인 외부 ERP 아이디 |
 | `ttt_pw` | TEXT, 기본 `''` | 외부 ERP 비밀번호 — **AES-256-GCM 암호화 저장** (`src/ttt/crypto.ts`, 키는 `APP_SECRET`에서 SHA-256 파생). 형식 `iv:tag:ciphertext` (base64). 복호화 실패 시 빈 문자열 반환 |
@@ -32,7 +32,7 @@ npr-notice 앱의 DB 스키마와 HTTP API 전체 목록. 모든 내용은 `` �
 | 컬럼 | 타입 | 의미 |
 |---|---|---|
 | `id` | TEXT PK | 로그인 아이디 (부트스트랩 시 `LEAD_ID` 환경변수, 기본 `admin`) |
-| `pw` | TEXT | 비밀번호 (`LEAD_PW` 환경변수) |
+| `pw` | TEXT | 비밀번호의 scrypt 해시 (`LEAD_PW` 환경변수로 최초 생성) |
 | `name` | TEXT | 표시 이름 (`LEAD_NAME` 환경변수) |
 
 마스터 팀장은 강사가 아니므로 일일보고 작성 대상이 아니다(`login`이 `isTeacher:false` 반환).
@@ -223,6 +223,8 @@ DB 파일 위치는 서버리스(`process.env.VERCEL`)면 `/tmp/app.sqlite`, 로
 
 ## 2. API 레퍼런스
 
+모든 비공개 API는 로그인 때 받은 세션 쿠키로 행위자를 정한다. 쿠키가 없거나 만료되면 401, 권한 밖이면 403이다. 표의 `role`·`tid` 쿼리는 화면 선택과 팀장이 대상 강사를 고를 때만 쓰이며 행위자를 바꾸지 않는다. 상태를 바꾸는 요청은 같은 출처에서 온 것만 받는다.
+
 전 API가 `pages/api/[[...slug]].ts` 하나의 catch-all 핸들러다(`maxDuration: 120`; 긴 외부 ERP 조회 여유). 매칭되는 라우트가 없으면 404, `HttpError`는 자기 status로, 그 외 예외는 500.
 
 ### 인증 / 상태 / 헬스
@@ -230,8 +232,9 @@ DB 파일 위치는 서버리스(`process.env.VERCEL`)면 `/tmp/app.sqlite`, 로
 | 메서드 | 경로 | 용도 | 권한 |
 |---|---|---|---|
 | GET | `/api/health` | keep-warm 핑(외부 모니터가 주기 호출 → 콜드스타트 회피). DB 동기화 없이 즉시 `{ok:true,warm:true}` | 공개 |
-| POST | `/api/login` | `{id, pw}` → `{role, tid, name, canLead, isTeacher, canOtherTeam}`. lead_account 우선 조회, 없으면 teachers. 다른 팀은 `role='other'`, 임명 팀장과 동시에 켜져 있으면 팀장 역할로 시작 | 공개 |
-| GET | `/api/state?role=&tid=` | 전체 상태 스냅샷(아래 3장) | role/tid가 결정 |
+| POST | `/api/login` | `{id, pw}` → `{role, tid, name, canLead, isTeacher, canOtherTeam}` + `Set-Cookie: npr_session`. lead_account 우선 조회, 없으면 teachers. 다른 팀은 `role='other'`, 임명 팀장과 동시에 켜져 있으면 팀장 역할로 시작. 같은 IP·아이디 5회 실패 시 10분 429 | 공개 |
+| POST | `/api/logout` | 세션 쿠키 삭제 | 공개 |
+| GET | `/api/state?role=` | 전체 상태 스냅샷(아래 3장). 행위자는 세션, `role`은 계정 권한 안의 화면 선택 | 세션 |
 
 ### 업무 `/api/tasks`
 
@@ -277,12 +280,12 @@ DB 파일 위치는 서버리스(`process.env.VERCEL`)면 `/tmp/app.sqlite`, 로
 
 | 메서드 | 경로 | 용도 | 권한(UI) |
 |---|---|---|---|
-| POST | `/api/teachers` | `{name, tid, pw, tttId, tttPw}` 생성. tid 중복 400. pw 기본 `'1234'` | 팀장 |
+| POST | `/api/teachers` | `{name, tid, pw, tttId, tttPw}` 생성. tid 중복 400. 아이디·초기 비밀번호 필수 | 팀장 |
 | POST | `/api/teachers/:tid/classes` | `{group, classes}` 직접 수정은 정규·특강을 포함한 모든 반 그룹에서 400. 정규반은 `/api/regular-classes/sync`, 특강반은 `/api/special-classes/sync`만 갱신 가능 | 팀장(항상 거부) |
 | POST | `/api/teachers/:tid/ttt` | `{tttId, tttPw}` 외부 ERP 계정 저장(빈 pw면 기존 유지, 검증 없음) | 팀장 |
 | POST | `/api/teachers/:tid/lead` | `{isLead}` 팀장 권한 부여/해제 | 팀장 |
 | POST | `/api/teachers/:tid/other-team` | `{isOtherTeam}` 다른 팀 편의 기능 권한 부여/해제. 강사·반 동기화 mutation lease로 직렬화 | 팀장 |
-| POST | `/api/teachers/:tid/reset-pw` | 임시 비번 발급 → `{tmp}` (`'np' + 4자리`) | 팀장 |
+| POST | `/api/teachers/:tid/reset-pw` | 임시 비번 발급 → `{tmp}` (`'np' + 임의 6자리`, 해시로 저장) | 팀장 |
 | POST | `/api/teachers/:tid/password` | `{pw}` 비밀번호 직접 지정 | 팀장 |
 | DELETE | `/api/teachers/:tid` | 강사 삭제 + 처리 상태/보고/리마인드/일정/특강 로스터 정리. 다른 팀이면 본인 반 캐시와 소유 개인 상담일정·상담/부재 이력도 삭제 | 팀장 |
 

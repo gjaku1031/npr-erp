@@ -238,7 +238,7 @@ test('other-team permission keeps staff in admin management but removes daily-re
   const login = store.login('partner-1', '1234');
   assert.deepEqual(login, {
     role: 'other', tid: 'partner-1', name: '협업 인원',
-    canLead: false, isTeacher: false, canOtherTeam: true,
+    canLead: false, isTeacher: false, canOtherTeam: true, accountKind: 'teacher',
   });
   assert.equal(store.login('  partner-1  ', '1234').role, 'other', 'login ids tolerate copy/paste whitespace');
 

@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
 import { backend } from '@/src/backend';
+import { assertSameOrigin, resolveActor } from '@/src/auth';
+import { HttpError } from '@/src/http-error';
 import {
   WeeklyPptError,
   type WeeklyClassAssignment,
@@ -37,10 +39,6 @@ class WeeklyExternalError extends Error {
     super(message);
     this.name = 'WeeklyExternalError';
   }
-}
-
-function queryString(value: string | string[] | undefined): string {
-  return Array.isArray(value) ? value[0] || '' : value || '';
 }
 
 function positiveInteger(value: unknown, label: string): number {
@@ -168,12 +166,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
-  const role = queryString(req.query.role);
-  const tid = queryString(req.query.tid);
-  if (role !== 'lead' || !tid) {
-    res.status(403).json({ message: '팀장 계정으로 로그인해 주세요.' });
+  const { db, store, ttt } = backend();
+  try {
+    assertSameOrigin(req);
+  } catch (error) {
+    res.status(error instanceof HttpError ? error.status : 403).json({ message: (error as Error).message });
     return;
   }
+  db.sync();
+  const actor = resolveActor(req, store);
+  if (!actor || actor.role !== 'lead') {
+    res.status(actor ? 403 : 401).json({ message: '팀장 계정으로 로그인해 주세요.' });
+    return;
+  }
+  const tid = actor.tid;
 
   try {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
@@ -193,8 +199,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       화목토반: cleanWeeklyText(body.tDate),
     };
 
-    const { db, store, ttt } = backend();
-    db.sync();
     const state = store.getState('lead', tid);
     const workbookInput = studentWorkbookFromBody(body);
     const workbook = await parseWeeklyStudentWorkbook(workbookInput.buffer);

@@ -128,6 +128,19 @@ function act(fn, msg?, optimistic?, lockKey?) { … }
 - `next.config.js`의 `headers()`가 `/app.css`, `/tokens/*`에 `max-age=3600, stale-while-revalidate=604800`을, 이미지에 `max-age=86400`을 준다. 해시가 붙는 `_next/static`은 Next가 이미 immutable 처리하므로 건드리지 않는다.
 - 다크모드 깜빡임 방지: `_document.tsx` 인라인 스크립트가 React 렌더 전에 `localStorage.npr_dark`를 읽어 `dark` 클래스를 붙인다.
 
+## 인증과 권한
+
+근거: `src/auth/index.ts`, `src/auth/session.ts`, `src/auth/password.ts`, `tests/auth-session.test.cjs`
+
+1. `POST /api/login` — `lead_account` 또는 `teachers`에서 아이디로 행을 찾고 scrypt 해시와 비교한다. 성공하면 서명된 세션 쿠키 `npr_session`(HttpOnly, SameSite=Lax, 운영에서 Secure, 12시간)을 내려 준다. 쿠키에는 계정 종류·아이디·만료 시각만 있고 `APP_SECRET`에서 나눈 키로 HMAC-SHA256 서명한다.
+2. 이후 요청마다 라우터가 원격 pull 뒤 `resolveActor()`로 쿠키를 검증하고, DB에서 그 계정의 권한(팀장·강사·다른 팀)을 다시 읽는다. 요청의 `role`은 이 권한 안에서만 화면 선택으로 받아들인다. 권한을 회수하면 다음 요청부터 반영된다.
+3. 상태를 바꾸는 요청은 `assertSameOrigin()`이 Origin(없으면 Sec-Fetch-Site)을 Host와 비교해 다른 사이트에서 온 요청을 403으로 막는다. SameSite=Lax 쿠키와 함께 요청 위조를 막는 장치다.
+4. 로그인 실패는 같은 IP·아이디 조합으로 10분 안에 5번이면 10분 동안 429로 막는다. 프로세스 메모리 기준이라 서버리스 인스턴스마다 따로 센다.
+5. 해시가 아닌 형식으로 남은 비밀번호는 부팅 때(`DbService.hashLegacyPasswords`)와 로그인 때 해시로 바꾼다.
+6. 클라이언트는 화면 정보만 `localStorage.npr_session`에 둔다. API가 401을 돌려주면 `lib/api.ts`의 `onUnauthorized`가 로그인 화면으로 돌린다.
+
+라우트 규칙 테스트(`tests/*-api.test.cjs`)는 인증을 대신해 요청의 `role`·`tid`를 행위자로 쓰고, 실제 인증과 권한 경계는 `tests/auth-session.test.cjs`가 실제 Store·DB로 검증한다.
+
 ## 외부 ERP 자격증명
 
 - 강사별 외부 ERP 아이디·비밀번호는 `teachers.ttt_id`·`ttt_pw`에 저장한다. 비밀번호는 `src/ttt/crypto.ts`가 AES-256-GCM으로 암호화하고, 키는 `APP_SECRET`에서 파생한다(`src/secret.ts`). 운영(`NODE_ENV=production`)에서 `APP_SECRET`이 없으면 기동하지 않고, 개발에서는 프로세스마다 임의 키를 만든다.
@@ -139,7 +152,7 @@ function act(fn, msg?, optimistic?, lockKey?) { … }
 ```mermaid
 flowchart TD
     B["브라우저 SPA<br/>components/** · lib/state.tsx"]
-    B -->|"fetch (기본 28s, 긴 ERP·특강상담 125s)<br/>lib/api.ts"| R
+    B -->|"fetch (기본 28s, 긴 ERP·특강상담 125s)<br/>lib/api.ts · 세션 쿠키"| R
 
     R["pages/api/[[...slug]].ts<br/>catch-all 라우터"]
     R -->|"backend() 싱글톤"| W["src/backend.ts<br/>DbService · StoreService · TttService · TttSpecialService"]

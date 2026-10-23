@@ -13,6 +13,7 @@ import {
 import { TttCounselWriteIndeterminateError } from '@/src/ttt/ttt.records';
 import { persistConfirmedExternalWrite } from '@/src/api/external-write-sync';
 import { appSecret } from '@/src/secret';
+import { assertSameOrigin, clearSessionCookie, issueSessionCookie, loginThrottle, resolveActor } from '@/src/auth';
 
 export const config = { maxDuration: 120 }; // 특강 ERP 최근 월 탐색/반별 상세 연락처 조회 여유
 
@@ -63,9 +64,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const q = req.query;
   const b = (req.body && typeof req.body === 'object') ? req.body : {};
   const creds = (tid?: string) => (tid ? store.getTeacherTtt(tid) : null);
-  const requestRoleRaw = s(q.role) || b.role || '';
-  const requestRole: 'lead' | 'teacher' | 'other' | null = requestRoleRaw === 'lead' || requestRoleRaw === 'teacher' || requestRoleRaw === 'other' ? requestRoleRaw : null;
-  const requestTid = s(q.tid) || b.tid || '';
+  // 행위자는 서명된 세션 쿠키로만 정한다(아래 try 안에서 원격 pull 뒤 확정). 요청의 role은 화면 선택일 뿐이다.
+  let requestRole: 'lead' | 'teacher' | 'other' | null = null;
+  let requestTid = '';
   const requireLead = () => {
     if (requestRole !== 'lead') throw new HttpError(403, '팀장만 사용할 수 있는 기능입니다.');
   };
@@ -150,7 +151,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // (Turso 아닐 땐 db.sync()가 no-op이라 로컬 개발엔 영향 없음)
   const a0 = p[0];
   const isLogin = a0 === 'login' && m === 'POST';
-  const isPublicRoute = a0 === 'health' || isLogin;
+  const isLogout = a0 === 'logout' && m === 'POST';
+  const isPublicRoute = a0 === 'health' || isLogin || isLogout;
   const isJournalCreate = a0 === 'journals' && m === 'POST' && !p[1];
   const isJournalItemTextEdit = a0 === 'journal-items' && m === 'POST' && p[2] === 'edit';
   const isTaskDefinitionWrite = a0 === 'tasks' && m === 'POST' && (!p[1] || p[2] === 'edit');
@@ -220,12 +222,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let requestPhase = 'auth';
 
   try {
-    if (!isPublicRoute && (!requestRole || !requestTid)) throw new HttpError(403, '로그인 정보를 확인할 수 없습니다.');
+    assertSameOrigin(req);
     if (isLegacyClassMutation) {
       throw new HttpError(410, '기존 자동 반 동기화는 종료되었습니다. 강사 현황 또는 본인 반 관리에서 통통통 반을 불러온 뒤 직접 선택해 주세요.');
     }
     requestPhase = 'pre-sync';
     if (needsStrictSync || needsStrictReadPull) db.syncStrict();
+    if (!isPublicRoute) {
+      requestPhase = 'auth';
+      const actor = resolveActor(req, store);
+      if (!actor) throw new HttpError(401, '로그인 정보를 확인할 수 없습니다. 다시 로그인해 주세요.');
+      requestRole = actor.role;
+      requestTid = actor.tid;
+    }
     if (needsTeacherMutationLease) {
       requestPhase = 'mutation-lease';
       teacherMutationLeaseToken = store.acquireTeacherClassMutationLease(`${m}:${p.join('/')}`);
@@ -238,7 +247,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let payload: any = out;
     if (m !== 'GET') {
       requestPhase = 'post-sync';
-      if (isLogin || isTeacherClassCatalogRead) {
+      if (isLogin || isLogout || isTeacherClassCatalogRead) {
         // 인증 직전 strict pull로 이미 최신 원격 상태를 읽었다. 로그인은 쓰기가 없으므로 추가 sync 불필요.
       } else if (isPrimarySpecialTaskCreate) {
         // createSpecialCounselTaskOnPrimary에서 이미 원격 원본에 원자적으로 커밋됐다.
@@ -256,11 +265,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       else db.sync(); // 변경 반영(프라이머리 + 로컬 리플리카)
       // fold-state: 변경 응답에 최신 뷰 상태를 함께 실어 보냄 → 클라가 별도 GET /state 없이 즉시 반영(왕복 1회 제거).
       // login/ttt는 자체 응답 형태 유지.
-      if (a0 !== 'login' && a0 !== 'ttt' && out !== null && !isTeacherClassCatalogRead && !regularClassPrimaryWrite && !counselRosterPrimaryWrite && !otherTeamPrimaryWrite && !isCounselRosterDelta && !isPrimarySpecialTaskCreate && !isEventTodoMutation) {
+      if (a0 !== 'login' && a0 !== 'logout' && a0 !== 'ttt' && out !== null && !isTeacherClassCatalogRead && !regularClassPrimaryWrite && !counselRosterPrimaryWrite && !otherTeamPrimaryWrite && !isCounselRosterDelta && !isPrimarySpecialTaskCreate && !isEventTodoMutation) {
         requestPhase = 'fold-state';
-        const role = (s(q.role) || b.role || 'lead') as any;
-        const tid = s(q.tid) || b.tid || 'admin';
-        try { payload = Object.assign(typeof out === 'object' ? { ...out } : { ok: true }, { state: store.getState(role, tid) }); } catch { /* fold 실패해도 변경 자체는 성공 */ }
+        try { payload = Object.assign(typeof out === 'object' ? { ...out } : { ok: true }, { state: store.getState(requestRole!, requestTid) }); } catch { /* fold 실패해도 변경 자체는 성공 */ }
       }
       if (confirmedCounselWrite) {
         const persistence = confirmedWritePersistence || (confirmedCounselWrite.localMarked ? 'synced' : 'pending');
@@ -736,8 +743,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (a === 'health') return { ok: true, warm: true };
 
     // ── 인증/상태 ──
-    if (a === 'login' && m === 'POST') return store.login(b.id, b.pw);
-    if (a === 'state' && m === 'GET') return store.getState(s(q.role) as any || 'lead', s(q.tid) || 'admin');
+    if (a === 'login' && m === 'POST') {
+      const throttleKey = loginThrottle.key(req, b.id);
+      loginThrottle.assertAllowed(throttleKey);
+      let account: ReturnType<typeof store.login>;
+      try { account = store.login(b.id, b.pw); } catch (error) { loginThrottle.recordFailure(throttleKey); throw error; }
+      loginThrottle.reset(throttleKey);
+      res.setHeader('Set-Cookie', issueSessionCookie(account.accountKind, account.tid));
+      const { accountKind: _kind, ...session } = account;
+      return session;
+    }
+    if (a === 'logout' && m === 'POST') {
+      res.setHeader('Set-Cookie', clearSessionCookie());
+      return ok;
+    }
+    if (a === 'state' && m === 'GET') return store.getState(requestRole!, requestTid);
 
     // ── 전체 강사 공통 반 관리: 전체 후보 조회와 선택 적용을 명시적으로 분리 ──
     if (a === 'class-management') {
@@ -1093,17 +1113,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (a === 'tasks') {
       if (requestRole === 'other') throw new HttpError(403, '다른 팀 계정은 상담일정 화면에서만 업무를 만들거나 변경할 수 있습니다.');
       if (!b1 && m === 'POST') {
-        if (String(b.tag || '').trim() === '특강 상담' || b.specialCounsel) requireLead();
+        requireLead();
         if (String(b.tag || '').trim() === '특강 상담') {
           return store.createSpecialCounselTaskOnPrimary(b, `${requestRole}:${requestTid}`);
         }
         return { id: store.createTask(b, `${requestRole}:${requestTid}`) };
       }
-      if (b1 && b2 === 'edit' && m === 'POST') { if (String(b.tag || '').trim() === '특강 상담' || b.specialCounsel) requireLead(); store.updateTask(b1, b); return ok; }
-      if (b1 && b2 === 'status' && m === 'POST') { store.setTaskStatus(b1, b.teacher, b.status, b.at); return ok; }
-      if (b1 && b2 === 'mt' && m === 'POST') { store.setTaskMt(b1, b.teacher, b.part, !!b.value, b.at); return ok; }
-      if (b1 && b2 === 'report' && m === 'POST') { store.saveTaskReport(b1, b.teacher, b.text || '', b.files || []); return ok; }
-      if (b1 && !b2 && m === 'DELETE') { store.deleteTask(b1); return ok; }
+      if (b1 && b2 === 'edit' && m === 'POST') { requireLead(); store.updateTask(b1, b); return ok; }
+      // 처리 상태와 보고는 강사 본인 것만 바꿀 수 있다. 팀장 화면은 강사를 지정할 수 있다.
+      if (b1 && b2 === 'status' && m === 'POST') { store.setTaskStatus(b1, boundTeacher(b.teacher), b.status, b.at); return ok; }
+      if (b1 && b2 === 'mt' && m === 'POST') { store.setTaskMt(b1, boundTeacher(b.teacher), b.part, !!b.value, b.at); return ok; }
+      if (b1 && b2 === 'report' && m === 'POST') { store.saveTaskReport(b1, boundTeacher(b.teacher), b.text || '', b.files || []); return ok; }
+      if (b1 && !b2 && m === 'DELETE') { requireLead(); store.deleteTask(b1); return ok; }
     }
 
     // ── 일정 ──
@@ -1120,6 +1141,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // ── 태그 ──
     if (a === 'tags') {
       if (requestRole === 'other') throw new HttpError(403, '다른 팀 계정은 태그를 변경할 수 없습니다.');
+      requireLead();
       if (!b1 && m === 'POST') { store.createTag(b.name, b.color, b.emoji); return ok; }
       if (b1 && m === 'POST') { store.updateTag(dec(b1), b); return ok; }
       if (b1 && m === 'DELETE') { store.deleteTag(dec(b1)); return ok; }
@@ -1128,6 +1150,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // ── 공지 ──
     if (a === 'notices') {
       if (requestRole === 'other') throw new HttpError(403, '다른 팀 계정은 공지사항을 변경할 수 없습니다.');
+      requireLead();
       if (!b1 && m === 'POST') return { id: store.createNotice(b.text) };
       if (b1 === 'reorder' && m === 'POST') { store.reorderNotices(b.ids || []); return ok; }
       if (b1 && m === 'POST') { store.updateNotice(b1, b); return ok; }
@@ -1168,11 +1191,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // ── 일일보고 제출물 ── /reports/:teacher/:date[/action]
     if (a === 'reports' && b1 && b2) {
       if (requestRole === 'other') throw new HttpError(403, '다른 팀 계정은 일일보고 대상이 아닙니다.');
-      const teacher = dec(b1), date = b2;
+      const date = b2;
+      // 강사는 본인 보고만 읽고 쓴다. 확인 처리는 팀장만 한다.
+      if (b3 === 'confirm' && m === 'POST') { requireLead(); store.confirmReport(dec(b1), date); return ok; }
+      const teacher = boundTeacher(dec(b1));
       if (!b3 && m === 'GET') return store.getReport(teacher, date);
       if (b3 === 'draft' && m === 'POST') { store.saveDraft(teacher, date, b.payload); return ok; }
       if (b3 === 'submit' && m === 'POST') { store.submitReport(teacher, date, b.payload); return ok; }
-      if (b3 === 'confirm' && m === 'POST') { store.confirmReport(teacher, date); return ok; }
       if (b3 === 'reopen' && m === 'POST') { store.reopenReport(teacher, date); return ok; }
     }
 
@@ -1180,6 +1205,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // ── 설정 (주간테스트 날짜 등) ──
     if (a === 'settings' && m === 'POST') {
       if (requestRole === 'other') throw new HttpError(403, '다른 팀 계정은 운영 설정을 변경할 수 없습니다.');
+      requireLead();
       store.setSetting(b.key, b.value); return ok;
     }
 

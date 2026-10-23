@@ -1,4 +1,5 @@
 import { encrypt } from '../ttt/crypto';
+import { hashPassword } from '../auth/password';
 
 type Database = any; // libSQL(better-sqlite3 호환) 핸들
 
@@ -11,7 +12,7 @@ export function bootstrapClean(db: Database): boolean {
   if (has.c > 0) return false; // 이미 부트스트랩됨 → 원격 동기화 push 불필요
   const tx = db.transaction(() => {
     db.prepare('INSERT INTO lead_account(id,pw,name) VALUES(?,?,?)').run(
-      process.env.LEAD_ID || 'admin', process.env.LEAD_PW || '1234', process.env.LEAD_NAME || '팀장',
+      process.env.LEAD_ID || 'admin', hashPassword(process.env.LEAD_PW || '1234'), process.env.LEAD_NAME || '팀장',
     );
     // 업무 생성에 필요한 기본 태그(설정성 기본값)
     const tags: [string, string, string, number][] = [
@@ -36,7 +37,7 @@ export function seedIfEmpty(db: Database): boolean {
 
   const tx = db.transaction(() => {
     // ── 팀장 계정 ── (teachers는 비었지만 lead_account가 이미 있는 경우에도 안전하게 재시드)
-    db.prepare('INSERT OR IGNORE INTO lead_account(id,pw,name) VALUES(?,?,?)').run('admin', '1234', '김도현');
+    db.prepare('INSERT OR IGNORE INTO lead_account(id,pw,name) VALUES(?,?,?)').run('admin', hashPassword('1234'), '김도현');
 
     // ── 강사 ──
     const teachers: [string, string, any, number][] = [
@@ -52,7 +53,8 @@ export function seedIfEmpty(db: Database): boolean {
       ['lim.jh', '임재현', { 월수금반: [], 화목토반: ['고1-B'] }, 10],
     ];
     const insT = db.prepare('INSERT INTO teachers(tid,name,pw,classes,sort) VALUES(?,?,?,?,?)');
-    for (const [tid, name, classes, sort] of teachers) insT.run(tid, name, '1234', JSON.stringify(classes), sort);
+    const demoPassword = hashPassword('1234');
+    for (const [tid, name, classes, sort] of teachers) insT.run(tid, name, demoPassword, JSON.stringify(classes), sort);
     // 데모 강사는 모의 ERP 계정을 미리 연결해 반 불러오기·출결·상담 조회를 바로 시험할 수 있게 한다.
     const demoErpPassword = encrypt('demo');
     const linkErp = db.prepare('UPDATE teachers SET ttt_id=?, ttt_pw=? WHERE tid=?');

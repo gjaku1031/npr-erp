@@ -15,7 +15,7 @@ NPR 업무일지 앱의 환경변수, 로컬 실행(모의 ERP), 테스트, DB, 
 | 이름 | 필수 | 기본값 | 설명 |
 |---|---|---|---|
 | `APP_TODAY` | 아니오 | (빈값) | 앱 기준 '오늘'을 `YYYY-MM-DD`로 고정. **비워두면 KST 실제 날짜**(`todayKST()`). 데모/테스트 전용. 외부 ERP 상담일자는 이 값과 무관하게 KST 실제 날짜를 쓴다. |
-| `APP_SECRET` | **운영 필수** | (없음) | 강사 외부 ERP 비밀번호 암호화 키(AES-256-GCM)와 반 목록 확인 정보 서명 키. 아래 경고 참조. |
+| `APP_SECRET` | **운영 필수** | (없음) | 세션 쿠키 서명 키, 강사 외부 ERP 비밀번호 암호화 키(AES-256-GCM), 반 목록 확인 정보 서명 키. 아래 경고 참조. |
 | `SEED_MODE` | 아니오 | `clean` | `clean`=팀장 계정 + 기본 태그만 생성. `demo`=디자인 프로토타입 기준 데모 데이터(`seedIfEmpty`). |
 | `LEAD_ID` | 아니오 | `admin` | 최초 부트스트랩 시 생성되는 팀장 로그인 ID. **이미 부트스트랩된 DB에는 반영 안 됨**(`lead_account`가 비어 있을 때만 INSERT). |
 | `LEAD_PW` | 아니오 | `1234` | 팀장 초기 비밀번호. 배포 시 반드시 바꿔 지정. |
@@ -26,7 +26,7 @@ NPR 업무일지 앱의 환경변수, 로컬 실행(모의 ERP), 테스트, DB, 
 
 > **`APP_SECRET`**
 > 강사별 외부 ERP 비밀번호는 `APP_SECRET`에서 SHA-256으로 파생한 키로 암호화되어 DB(`teachers.ttt_pw`)에 저장된다(`src/ttt/crypto.ts`).
-> 운영(`NODE_ENV=production`, 즉 `next start`)에서 값이 없으면 기동하지 않는다. 개발(`next dev`)과 테스트에서 비어 있으면 프로세스마다 임의 키를 만든다(`src/secret.ts`).
+> 운영(`NODE_ENV=production`, 즉 `next start`)에서 값이 없으면 API가 요청을 처리하지 않는다(500, 로그에 `APP_SECRET 환경변수가 필요합니다.`). 개발(`next dev`)과 테스트에서 비어 있으면 프로세스마다 임의 키를 만들므로 재시작하면 로그인이 풀린다(`src/secret.ts`).
 > **값을 바꾸면 기존에 저장된 외부 ERP 비밀번호를 복호화할 수 없다.** `decrypt()`는 실패 시 빈 문자열을 반환한다. 배포 전에 한 번 정하고 고정한다.
 
 ### 외부 ERP
@@ -60,7 +60,7 @@ pnpm dev                  # http://localhost:3000
 
 - 데모 계정: 팀장 `admin` / `1234`, 강사 `lee.he` / `1234`(그 밖의 강사 아이디는 `src/db/seed.ts`).
 - 데모 강사는 모의 ERP 계정이 연결돼 있어 [반 관리 → 반 불러오기], 일일보고 2~4단계(알림장·상담·출결), 상담 전송을 바로 시험할 수 있다. 모의 ERP는 강사 이름에서 반·원생을 결정적으로 만든다.
-- 운영 모드 확인: `npm run build && APP_SECRET=<임의 문자열> npm start`.
+- 운영 모드 확인: `npm run build && APP_SECRET=<임의 문자열> npm start`. 운영 모드의 세션 쿠키는 Secure라 HTTPS나 `localhost`에서만 로그인이 유지된다.
 - DB는 `data/app.sqlite`에 생긴다. 데모를 처음부터 다시 보려면 `data/` 폴더를 지운다.
 
 ### 자동 테스트
@@ -76,6 +76,7 @@ npm run build
 - 읽기 일관성·반 동기화(`tests/read-consistency-api.test.cjs`, `tests/regular-class-*.test.cjs`, `tests/counsel-roster-*.test.cjs`)
 - 특강 도메인(`tests/special-feature.test.cjs`): 특강기간 ON/OFF와 일일보고 생성 시점 플래그 보존, 정확한 강사 매칭, 수강년월·학생 로스터 고정, 특강일 반 병합
 - 모의 ERP(`tests/ttt-mock-gateway.test.cjs`): 결정적 반·원생, 계정 없는 조회의 빈 값, 모의 구현 위 상담 쓰기
+- 인증과 권한(`tests/auth-session.test.cjs`): 비밀번호 해시와 이전 형식 전환, 세션 토큰 위조·만료, 요청의 `role`·`tid` 위조 무시, 팀장 전용·본인 전용 경로, 다른 출처 요청 차단, 로그인 시도 제한
 - 주간테스트 PPT/PDF(`tests/weekly-*.test.cjs`)와 화면 단위 테스트(`tests/*-ui.test.cjs`)
 
 CI 워크플로와 브라우저 E2E는 없다.

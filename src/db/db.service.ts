@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { SCHEMA_SQL } from './schema';
 import { seedIfEmpty, bootstrapClean } from './seed';
+import { hashPassword, isPasswordHash } from '../auth/password';
 
 const TEACHER_CLASS_KEYS = ['월수금반', '화목토반', '특강 월수금반', '특강 화목토반'] as const;
 const SPECIAL_ASSIGNEES_MIGRATION_KEY = 'db_migration_special_assignees_v1';
@@ -58,10 +59,25 @@ export class DbService {
     if (this.turso) this.safeSync(); // 콜드스타트: 원격의 기존 데이터/스키마 pull
     this.db.exec(SCHEMA_SQL); // CREATE TABLE IF NOT EXISTS (기존 테이블이면 no-op)
     const migrated = this.migrate();
+    const rehashed = this.hashLegacyPasswords();
     const mode = (process.env.SEED_MODE || 'clean').toLowerCase();
     const seeded = mode === 'demo' ? seedIfEmpty(this.db) : bootstrapClean(this.db);
     // 실제 로컬 변경(마이그레이션/부트스트랩)이 있을 때만 push — 이미 부트된 콜드스타트는 pull만(약 1회 왕복 절약)
-    if (this.turso && (migrated || seeded)) this.syncStrict();
+    if (this.turso && (migrated || rehashed || seeded)) this.syncStrict();
+  }
+
+  /** 해시 도입 전 형식으로 남은 앱 로그인 비밀번호를 scrypt 해시로 바꾼다. 바꾼 행이 있으면 true. */
+  private hashLegacyPasswords(): boolean {
+    let changed = false;
+    for (const [table, key] of [['lead_account', 'id'], ['teachers', 'tid']] as const) {
+      const rows = this.db.prepare(`SELECT ${key} AS k, pw FROM ${table}`).all() as Array<{ k: string; pw: string }>;
+      for (const row of rows) {
+        if (isPasswordHash(row.pw)) continue;
+        this.db.prepare(`UPDATE ${table} SET pw=? WHERE ${key}=?`).run(hashPassword(String(row.pw || '')), row.k);
+        changed = true;
+      }
+    }
+    return changed;
   }
 
   /** 변경 후 원격 동기화 (Turso일 때만). */

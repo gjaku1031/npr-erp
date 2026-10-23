@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useRef, useState, useEffect, useCallback } from 'react';
-import { api, setAuthCtx } from './api';
+import { api, onUnauthorized, setAuthCtx } from './api';
 import { classesForDate, isSpecialJournal, koDate, koDateFull, toast } from './helpers';
 import { runCounselRosterRefresh, pickCounselReconcile, counselReconcileSummary } from './counsel-sync';
 
@@ -74,7 +74,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await App.reload();
       App.ui.booting = false; render();
     };
-    App.logout = function () { localStorage.removeItem('npr_session'); App.session = null; App.state = null; App.ui = null; render(); };
+    App.logout = function () {
+      // 세션 쿠키는 HttpOnly라 서버가 지운다. 응답을 기다리지 않고 화면은 바로 로그인으로 돌린다.
+      api.post('/api/logout').catch(() => { /* 이미 만료된 세션 */ });
+      localStorage.removeItem('npr_session'); App.session = null; App.state = null; App.ui = null; render();
+    };
+    // 서버가 401을 돌려주면(쿠키 만료·로그아웃된 다른 탭) 저장된 화면 정보도 지우고 로그인으로 돌아간다.
+    onUnauthorized(() => {
+      if (!App.session) return;
+      localStorage.removeItem('npr_session'); App.session = null; App.state = null; App.ui = null; render();
+    });
     // 권한을 함께 가진 계정의 관리/강사/다른 팀 화면 전환. 다른 팀은 일일보고 대상이 아니다.
     App.switchRole = async function (role: 'lead' | 'teacher' | 'other') {
       if (!App.session || App.ui.role === role) return;

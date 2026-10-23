@@ -1,8 +1,9 @@
-import { createHash, randomUUID } from 'crypto';
+import { createHash, randomInt, randomUUID } from 'crypto';
 import { DbService } from '../db/db.service';
 import { config, koDate, koDateFull, ddayFrom, groupOf } from '../config';
 import { encrypt, decrypt } from '../ttt/crypto';
 import { HttpError } from '../http-error';
+import { hashPassword, verifyPassword } from '../auth/password';
 
 type Role = 'lead' | 'teacher' | 'other';
 // 삭제·이름변경 불가 시스템 태그. 색상/이모지만 관리자가 바꿀 수 있다.
@@ -382,17 +383,17 @@ export class StoreService {
   }
 
   // ────────────────────────── 인증 ──────────────────────────
-  login(id: string, pw: string): { role: Role; tid: string; name: string; canLead: boolean; isTeacher: boolean; canOtherTeam: boolean } {
+  login(id: string, pw: string): { role: Role; tid: string; name: string; canLead: boolean; isTeacher: boolean; canOtherTeam: boolean; accountKind: 'lead' | 'teacher' } {
     const normalizedId = String(id || '').trim();
     const lead = this.db.get<any>('SELECT * FROM lead_account WHERE id=?', normalizedId);
     if (lead) {
-      if (lead.pw !== pw) throw new HttpError(400,'비밀번호가 올바르지 않습니다.');
+      this.assertPassword(lead.pw, pw, (hash) => this.db.run('UPDATE lead_account SET pw=? WHERE id=?', hash, lead.id));
       // 마스터 팀장(admin): 팀장 권한만, 강사 일일보고는 없음
-      return { role: 'lead', tid: lead.id, name: lead.name, canLead: true, isTeacher: false, canOtherTeam: false };
+      return { role: 'lead', tid: lead.id, name: lead.name, canLead: true, isTeacher: false, canOtherTeam: false, accountKind: 'lead' };
     }
     const t = this.db.get<any>('SELECT * FROM teachers WHERE tid=?', normalizedId);
     if (!t) throw new HttpError(400,'등록된 계정을 찾을 수 없습니다.');
-    if (t.pw !== pw) throw new HttpError(400,'비밀번호가 올바르지 않습니다.');
+    this.assertPassword(t.pw, pw, (hash) => this.db.run('UPDATE teachers SET pw=? WHERE tid=?', hash, t.tid));
     // 다른 팀 권한은 일일보고 대상에서 제외되는 편의 기능 전용 역할이다.
     // 팀장 권한도 함께 있으면 관리 화면을 우선 시작하고, 역할 전환으로 다른 팀 화면을 열 수 있다.
     const canLead = !!t.is_lead;
@@ -404,7 +405,27 @@ export class StoreService {
       canLead,
       isTeacher: !canOtherTeam,
       canOtherTeam,
+      accountKind: 'teacher',
     };
+  }
+
+  /** 비밀번호 확인. 해시 도입 전 형식으로 저장된 값이 맞으면 그 자리에서 해시로 바꿔 저장한다. */
+  private assertPassword(stored: string, pw: string, rehash: (hash: string) => void) {
+    if (!pw) throw new HttpError(400,'비밀번호를 입력해 주세요.');
+    const result = verifyPassword(stored, pw);
+    if (!result.ok) throw new HttpError(400,'비밀번호가 올바르지 않습니다.');
+    if (result.needsRehash) rehash(hashPassword(pw));
+  }
+
+  /** 세션 쿠키의 계정을 현재 DB 권한으로 다시 읽는다. 계정이 없으면 null. */
+  getSessionAccount(kind: 'lead' | 'teacher', tid: string): { tid: string; canLead: boolean; isTeacher: boolean; canOtherTeam: boolean } | null {
+    if (kind === 'lead') {
+      const lead = this.db.get<any>('SELECT id FROM lead_account WHERE id=?', tid);
+      return lead ? { tid: lead.id, canLead: true, isTeacher: false, canOtherTeam: false } : null;
+    }
+    const t = this.db.get<any>('SELECT tid,is_lead,is_other_team FROM teachers WHERE tid=?', tid);
+    if (!t) return null;
+    return { tid: t.tid, canLead: !!t.is_lead, isTeacher: !t.is_other_team, canOtherTeam: !!t.is_other_team };
   }
 
   /** 팀장 권한 부여/해제 (강사 → 팀장) */
@@ -3624,6 +3645,8 @@ export class StoreService {
   createTeacher(name: string, tid: string, pw: string, tttId = '', tttPw = '') {
     const normalizedName = String(name || '').trim();
     if (!normalizedName) throw new HttpError(400, '강사 이름을 입력해 주세요.');
+    if (!String(tid || '').trim()) throw new HttpError(400, '아이디를 입력해 주세요.');
+    if (!pw || !String(pw).trim()) throw new HttpError(400, '초기 비밀번호를 입력해 주세요.');
     if (this.db.get('SELECT tid FROM teachers WHERE tid=?', tid)) throw new HttpError(400,'이미 있는 아이디입니다.');
     const duplicateName = this.db.all<any>('SELECT name FROM teachers')
       .some((teacher) => String(teacher.name || '').trim() === normalizedName);
@@ -3632,7 +3655,7 @@ export class StoreService {
     }
     const sort = (this.db.get<any>('SELECT MAX(sort) m FROM teachers')?.m || 0) + 1;
     this.db.run('INSERT INTO teachers(tid,name,pw,classes,ttt_id,ttt_pw,sort) VALUES(?,?,?,?,?,?,?)',
-      tid, normalizedName, pw || '1234', J(normalizeTeacherClasses({})), tttId || '', tttPw ? encrypt(tttPw) : '', sort);
+      tid, normalizedName, hashPassword(pw), J(normalizeTeacherClasses({})), tttId || '', tttPw ? encrypt(tttPw) : '', sort);
   }
 
   /** 강사 통통통 계정 저장 (비번은 암호화). tttPw 빈문자면 기존 유지 */
@@ -3688,15 +3711,16 @@ export class StoreService {
     throw new HttpError(400, '지원하지 않는 반 그룹입니다.');
   }
   resetTeacherPw(tid: string): string {
-    const tmp = 'np' + Math.floor(1000 + (Date.now() % 9000));
-    this.db.run('UPDATE teachers SET pw=? WHERE tid=?', tmp, tid);
+    if (!this.teacherByTid(tid)) throw new HttpError(400,'강사 없음');
+    const tmp = 'np' + randomInt(100000, 1000000);
+    this.db.run('UPDATE teachers SET pw=? WHERE tid=?', hashPassword(tmp), tid);
     return tmp;
   }
   /** 강사 로그인 비밀번호를 직접 지정 변경 */
   setTeacherPassword(tid: string, pw: string) {
     if (!this.teacherByTid(tid)) throw new HttpError(400,'강사 없음');
     if (!pw || !pw.trim()) throw new HttpError(400,'비밀번호를 입력해 주세요.');
-    this.db.run('UPDATE teachers SET pw=? WHERE tid=?', pw, tid);
+    this.db.run('UPDATE teachers SET pw=? WHERE tid=?', hashPassword(pw), tid);
   }
   /** 강사 삭제 + 연관 데이터 정리 */
   deleteTeacher(tid: string) {

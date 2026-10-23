@@ -4,6 +4,10 @@
 let authCtx: { role: string; tid: string } | null = null;
 export function setAuthCtx(role: string, tid: string) { authCtx = { role, tid }; }
 
+// 세션 쿠키가 만료됐거나 없으면 서버가 401을 돌려준다. 앱은 이때 로그인 화면으로 돌아간다.
+let unauthorizedHandler: (() => void) | null = null;
+export function onUnauthorized(handler: () => void) { unauthorizedHandler = handler; }
+
 function withAuth(path: string): string {
   // 기존 역할 기반 요청 컨텍스트를 조회에도 실어 상담/연락처 API가 현재 강사 본인으로 바인딩할 수 있게 한다.
   if (authCtx) {
@@ -65,6 +69,7 @@ export async function req(method: string, path: string, body?: any): Promise<any
   const txt = await res.text();
   let data: any = null;
   try { data = txt ? JSON.parse(txt) : null; } catch { data = null; }
+  if (res.status === 401 && unauthorizedHandler && !/^\/api\/login(?:\?|$)/.test(path)) unauthorizedHandler();
   if (!res.ok) {
     const msg = (data && data.message)
       || (res.status >= 500 ? '서버가 일시적으로 응답하지 못했습니다. 잠시 후 다시 시도해 주세요.' : (res.statusText || '요청을 처리하지 못했습니다.'));
@@ -95,6 +100,7 @@ export async function postBlob(path: string, body: any): Promise<{
     throw new Error('네트워크 연결을 확인해 주세요.');
   }
   clearTimeout(timer);
+  if (res.status === 401 && unauthorizedHandler) unauthorizedHandler();
   if (!res.ok) {
     let message = res.status >= 500
       ? '서버가 일시적으로 응답하지 못했습니다. 잠시 후 다시 시도해 주세요.'

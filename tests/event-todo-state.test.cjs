@@ -30,6 +30,7 @@ function loadStateModule() {
         del(...args) { return activeApi.del(...args); },
       },
       setAuthCtx() {},
+      onUnauthorized() {},
     },
     './helpers': {
       classesForDate: () => [],
