@@ -93,6 +93,28 @@ test('teacher past logs are driven by created journals and include missing, draf
   assert.equal(state.myPastLogs.some((row) => row.date === '2026-08-02'), false, 'an orphan report is not a created journal');
 }));
 
+test('journal report statuses list every teacher for the lead and only the viewer for a teacher', () => withStore(({ db, store }) => {
+  db.run(
+    'INSERT INTO teachers(tid,name,pw,classes,sort) VALUES(?,?,?,?,?)',
+    'teacher-2', 'Teacher Two', 'pw', JSON.stringify({ 월수금반: [], 화목토반: [], '특강 월수금반': [], '특강 화목토반': [] }), 2,
+  );
+  addJournal(db, '2026-08-05');
+  for (const [id, teacher] of [['report-1', 'Teacher One'], ['report-2', 'Teacher Two']]) {
+    db.run(
+      'INSERT INTO daily_reports(id,teacher,date,status,confirmed,payload,submitted_at) VALUES(?,?,?,?,?,?,?)',
+      id, teacher, '2026-08-05', 'submitted', 0, '{}', '제출',
+    );
+  }
+  const reportsFor = (state) => state.journals.find((journal) => journal.date === '2026-08-05').reports;
+  assert.deepEqual(Object.keys(reportsFor(store.getState('lead', 'admin'))).sort(), ['Teacher One', 'Teacher Two']);
+  assert.deepEqual(reportsFor(store.getState('teacher', 'teacher-1')), {
+    'Teacher One': { submitted: true, confirmed: false },
+  });
+  assert.deepEqual(reportsFor(store.getState('teacher', 'teacher-2')), {
+    'Teacher Two': { submitted: true, confirmed: false },
+  });
+}));
+
 test('drafting and submitting a past journal writes only the selected report date', () => withStore(({ db, store }) => {
   addJournal(db, '2026-08-06');
   addJournal(db, '2026-08-05');

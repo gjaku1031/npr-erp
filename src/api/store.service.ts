@@ -792,11 +792,16 @@ export class StoreService {
       const submitted = r.status === 'submitted';
       (reportsByDate[r.date] || (reportsByDate[r.date] = {}))[r.teacher] = { submitted, confirmed: submitted && !!r.confirmed };
     }
+    // 날짜별 전원 제출·확인 현황은 팀장 화면이 쓰고, 강사 화면에는 본인 것만 내려 보낸다.
+    const visibleReports = (all: Record<string, { submitted: boolean; confirmed: boolean }> = {}) => {
+      if (isLead) return all;
+      return me && all[me.name] ? { [me.name]: all[me.name] } : {};
+    };
     const journals = this.db.all<any>('SELECT date,special_period FROM journals ORDER BY date DESC').map((j) => ({
       date: j.date, label: koDate(j.date), items: itemsByDate[j.date] || [],
       specialPeriod: !!j.special_period,
       kind: j.date === today ? 'today' : j.date < today ? 'past' : 'future',
-      reports: reportsByDate[j.date] || {}, // { 강사명: {submitted, confirmed} }
+      reports: visibleReports(reportsByDate[j.date]), // { 강사명: {submitted, confirmed} }
     }));
 
     // 오늘 제출/확인 현황
