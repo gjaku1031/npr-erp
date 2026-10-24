@@ -74,45 +74,45 @@ export function seedIfEmpty(db: Database): boolean {
 
     // ── 업무 ──
     const insTask = db.prepare(
-      `INSERT INTO tasks(id,title,descr,tag,start_date,due_date,scope,report_req,attach_req,counsel,archived,links,atts,created_at,sort)
-       VALUES(@id,@title,@descr,@tag,@start_date,@due_date,@scope,@report_req,@attach_req,@counsel,@archived,@links,@atts,@created_at,@sort)`,
+      `INSERT INTO tasks(id,title,descr,tag,start_date,due_date,scope,report_req,attach_req,counsel,links,created_at,sort)
+       VALUES(@id,@title,@descr,@tag,@start_date,@due_date,@scope,@report_req,@attach_req,@counsel,@links,@created_at,@sort)`,
     );
     const tasks = [
       {
         id: 't1', title: '7월 모의고사 채점 및 성적 입력',
-        descr: '채점 후 통통통 성적 입력까지 완료해 주세요. 서술형 문항은 첨부된 채점 기준을 따릅니다.',
+        descr: '채점 후 통통통 성적 입력까지 완료해 주세요. 서술형 문항은 공유된 채점 기준을 따릅니다.',
         tag: '채점', start_date: '2026-07-08', due_date: '2026-07-13', scope: '"all"',
-        report_req: 1, attach_req: 0, archived: 0,
+        report_req: 1, attach_req: 0,
         links: JSON.stringify([{ label: '성적 입력 시트', url: 'https://docs.google.com/spreadsheets/d/np-score-2026' }]),
-        atts: JSON.stringify(['7월모의고사_채점기준.pdf']), created_at: '2026-07-08', sort: 1,
+        created_at: '2026-07-08', sort: 1,
       },
       {
         id: 't2', title: '여름특강 교재 재고 확인',
         descr: '담당 반 교재 잔여 수량을 세어 시트에 입력해 주세요. 부족분은 12일까지 주문 예정입니다.',
         tag: '교재', start_date: '2026-07-10', due_date: '2026-07-17', scope: '"all"',
-        report_req: 0, attach_req: 1, archived: 0,
+        report_req: 0, attach_req: 1,
         links: JSON.stringify([{ label: '재고 입력 시트', url: 'https://docs.google.com/spreadsheets/d/np-stock-2026' }]),
-        atts: '[]', created_at: '2026-07-10', sort: 2,
+        created_at: '2026-07-10', sort: 2,
       },
       {
         id: 't3', title: '신규 상담 대기자 연락',
         descr: '배정된 상담 대기 학부모에게 전화해 상담 일정을 확정해 주세요.',
         tag: '상담', start_date: '2026-07-09', due_date: '2026-07-12',
         scope: JSON.stringify(['김민지', '박서준', '이하은']),
-        report_req: 0, attach_req: 0, archived: 0, links: '[]', atts: '[]', created_at: '2026-07-09', sort: 3,
+        report_req: 0, attach_req: 0, links: '[]', created_at: '2026-07-09', sort: 3,
       },
       {
         id: 't4', title: '학부모 간담회 좌석 배치안',
         descr: '간담회장 좌석 배치 초안을 작성해 공유해 주세요.',
         tag: '행사', start_date: '2026-07-13', due_date: '2026-07-20',
         scope: JSON.stringify(['최지우', '정다인']),
-        report_req: 0, attach_req: 0, archived: 0, links: '[]', atts: '[]', created_at: '2026-07-13', sort: 4,
+        report_req: 0, attach_req: 0, links: '[]', created_at: '2026-07-13', sort: 4,
       },
       {
         id: 't5', title: '6월 성적표 발송 확인',
         descr: '전 반 성적표 발송 여부를 확인해 주세요.',
         tag: '행정', start_date: '2026-07-01', due_date: '2026-07-04', scope: '"all"',
-        report_req: 0, attach_req: 0, archived: 1, links: '[]', atts: '[]', created_at: '2026-07-01', sort: 5,
+        report_req: 0, attach_req: 0, links: '[]', created_at: '2026-07-01', sort: 5,
       },
     ];
     for (const t of tasks) insTask.run({ ...t, counsel: t.tag === '상담' ? 1 : 0 });
@@ -133,7 +133,7 @@ export function seedIfEmpty(db: Database): boolean {
     insSt.run('t2', '이하은', 'done', '재고 32권 확인, 시트 입력 완료.', JSON.stringify(['재고사진_01.jpg']), '어제');
     // t3
     done('t3', '김민지', '10:02', '2건 통화 완료 — 7/14, 7/15 상담 확정.'); done('t3', '박서준', '10:45');
-    // t5 archived — 전원 완료
+    // t5 — 전원 완료
     for (const [, name] of teachers) done('t5', name, '');
 
     // ── 일정(개인/팀) ──

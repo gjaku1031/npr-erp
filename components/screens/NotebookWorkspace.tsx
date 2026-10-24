@@ -1,6 +1,6 @@
 import React from 'react';
 import { Alert, Badge, Btn, Card, DraftField, DraftTextArea } from '@/components/ui';
-import { koDate, nextDay, pickFiles } from '@/lib/helpers';
+import { koDate, pickFiles } from '@/lib/helpers';
 
 type NotebookState = {
   nbSync: string;
@@ -36,7 +36,7 @@ export function NotebookWorkspace(props: {
           <span className="muted">담당 반</span>
           <span style={{ fontWeight: 600 }}>{classes.join(' · ') || '없음'}<span className="muted" style={{ fontWeight: 400 }}>{` · ${classes.length}개 반`}</span></span>
           <span className="muted">마감일</span>
-          <span style={{ fontWeight: 600 }}>{koDate(nextDay(date))}<span className="muted" style={{ fontWeight: 400 }}> — 다음 날로 자동 지정</span></span>
+          <span style={{ fontWeight: 600 }}>{koDate(date)}<span className="muted" style={{ fontWeight: 400 }}> — 일일보고 날짜</span></span>
         </div>
 
         {!classes.length ? (

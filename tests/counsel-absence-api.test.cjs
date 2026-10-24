@@ -131,13 +131,13 @@ function createHarness() {
   }), 'teacher-1');
   const taskId = store.createTask({
     title: 'Counsel Task', descr: '', tag: '상담', start: '2026-07-23', due: '2026-07-31',
-    all: true, pick: [], links: [], atts: [], reportReq: true, attachReq: true, mt: false,
+    all: true, pick: [], links: [], reportReq: true, attachReq: true, mt: false,
   }, 'lead:admin');
   db.run(
     `INSERT INTO counsel_entries(
        id,task_id,teacher,teacher_tid,cls,class_code,scode,student,phone,subject,content,
-       synced,synced_at,done,roster_active,roster_source_month,roster_seen_at,roster_removed_at
-     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,0,'',0,1,?,?,'')`,
+       synced,synced_at,roster_active,roster_source_month,roster_seen_at,roster_removed_at
+     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,0,'',1,?,?,'')`,
     'entry-1', taskId, 'Teacher One', 'teacher-1', 'Class One', 'class-1',
     'S1', 'Student One', '', '', '', '2026-07', '2026-07-23T00:00:00.000Z',
   );

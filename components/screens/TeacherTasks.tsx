@@ -17,10 +17,10 @@ export function TeacherTasks(props: { otherTeam?: boolean } = {}) {
     if (t.counsel || t.specialCounsel) return counselComplete(t.counselProg?.[S.me.name], !!t.specialCounsel);
     return (t.statuses[S.me.name] || {}).status === 'done';
   };
-  const open = mine.filter((t: any) => !isDone(t) && !t.archived).length;
+  const open = mine.filter((t: any) => !isDone(t)).length;
   const vis = mine.filter((t: any) => {
-    if (u.myFilter === 'done') return isDone(t) || t.archived;
-    if (u.myFilter === 'open') return !isDone(t) && !t.archived;
+    if (u.myFilter === 'done') return isDone(t);
+    if (u.myFilter === 'open') return !isDone(t);
     return true;
   });
   const chips: [string, string][] = [['all', '전체'], ['open', '진행 중'], ['done', '완료']];
@@ -42,7 +42,7 @@ export function TeacherTasks(props: { otherTeam?: boolean } = {}) {
         <div className="row detail-hd">
           <h2 style={{ fontSize: 18, fontWeight: 700, flex: 1 }}>{t.title}</h2>
           {t.specialCounsel ? <Badge tone="brand" icon="✦">특강상담</Badge> : t.counsel ? <Badge tone="brand">전체 상담</Badge> : null}
-          <Badge tone={ddayTone(t.dday, t.archived)}>{ddayLabel(t.dday)}</Badge>
+          <Badge tone={ddayTone(t.dday)}>{ddayLabel(t.dday)}</Badge>
           {otherTeam ? <Btn variant="ghost" size="sm" onClick={() => App.deleteOtherCounsel(t.id, t.title)}>삭제</Btn> : null}
         </div>
         <Markdown text={t.descr} style={{ fontSize: 14, lineHeight: 1.7 }} />
@@ -54,7 +54,6 @@ export function TeacherTasks(props: { otherTeam?: boolean } = {}) {
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {(t.links || []).map((l: any, i: number) => <a key={'l' + i} className="link-chip" href={l.url} target="_blank">{'🔗 ' + l.label}</a>)}
-          {(t.atts || []).map((a: any, i: number) => <span key={'a' + i} className="file-chip">{'📎 ' + a}</span>)}
         </div>
         {counselLike ? (
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -179,7 +178,7 @@ export function TeacherTasks(props: { otherTeam?: boolean } = {}) {
                 </div>
                 <div className="row" style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>
                   <span>{'마감 ' + t.dueLabel}</span>
-                  <Badge tone={ddayTone(t.dday, t.archived)}>{ddayLabel(t.dday)}</Badge>
+                  <Badge tone={ddayTone(t.dday)}>{ddayLabel(t.dday)}</Badge>
                 </div>
               </div>
             );

@@ -1,4 +1,4 @@
-import { createHash, randomInt, randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { DbService } from '../db/db.service';
 import { config, koDate, koDateFull, ddayFrom, groupOf } from '../config';
 import { encrypt, decrypt } from '../ttt/crypto';
@@ -655,9 +655,9 @@ export class StoreService {
       id: t.id, title: t.title, descr: t.descr, tag: t.tag,
       start: t.start_date, due: t.due_date, startLabel: koDate(t.start_date), dueLabel: koDate(t.due_date),
       dday, scope, assignees, reportReq: !!t.report_req, attachReq: !!t.attach_req, mt: !!t.mt,
-      counsel: !!t.counsel, specialCounsel: !!t.special_counsel, specialSourceMonth: t.special_source_month || '', counselProg: cprog, archived: !!t.archived,
+      counsel: !!t.counsel, specialCounsel: !!t.special_counsel, specialSourceMonth: t.special_source_month || '', counselProg: cprog,
       selfManaged: !!t.self_managed, createdByTid: t.created_by_tid || '', selfSourceMonth: t.self_source_month || '',
-      links: P(t.links, []), atts: P(t.atts, []), statuses: stMap, doneCount: done, total: assignees.length,
+      links: P(t.links, []), statuses: stMap, doneCount: done, total: assignees.length,
       sm: Number(t.start_date.slice(5, 7)), sd: Number(t.start_date.slice(8, 10)),
       em: Number(t.due_date.slice(5, 7)), ed: Number(t.due_date.slice(8, 10)),
     };
@@ -1288,12 +1288,12 @@ export class StoreService {
     const selectedResult = connection.prepare(
       `WITH allowed(teacher_name) AS (VALUES ${allowedValues})
        INSERT OR IGNORE INTO counsel_entries(
-         id,task_id,teacher,teacher_tid,cls,class_code,scode,student,phone,subject,content,synced,synced_at,done,
+         id,task_id,teacher,teacher_tid,cls,class_code,scode,student,phone,subject,content,synced,synced_at,
          roster_active,roster_source_month,roster_seen_at,roster_removed_at
        )
        SELECT 'ce' || lower(hex(randomblob(16))), ?, teacher.name, classes.teacher_tid,
               classes.class_name, classes.class_code, students.scode, students.student,
-              '', '', '', 0, '', 0, 1, classes.source_month, classes.synced_at, ''
+              '', '', '', 0, '', 1, classes.source_month, classes.synced_at, ''
        FROM other_team_classes classes
        JOIN other_team_students students
          ON students.teacher_tid=classes.teacher_tid
@@ -1310,12 +1310,12 @@ export class StoreService {
     const legacyResult = connection.prepare(
       `WITH allowed(teacher_name) AS (VALUES ${allowedValues})
        INSERT OR IGNORE INTO counsel_entries(
-         id,task_id,teacher,teacher_tid,cls,class_code,scode,student,phone,subject,content,synced,synced_at,done,
+         id,task_id,teacher,teacher_tid,cls,class_code,scode,student,phone,subject,content,synced,synced_at,
          roster_active,roster_source_month,roster_seen_at,roster_removed_at
        )
        SELECT 'ce' || lower(hex(randomblob(16))), ?, roster.teacher_name, roster.teacher_tid,
               roster.class_name, roster.class_code, roster.scode, roster.student,
-              coalesce(roster.mother_phone,''), '', '', 0, '', 0, 1, roster.source_month, roster.synced_at, ''
+              coalesce(roster.mother_phone,''), '', '', 0, '', 1, roster.source_month, roster.synced_at, ''
        FROM special_class_roster roster
        JOIN allowed ON allowed.teacher_name=roster.teacher_name
        WHERE roster.source_month=?
@@ -1364,7 +1364,6 @@ export class StoreService {
       counsel: counsel ? 1 : 0,
       specialCounsel: specialCounsel ? 1 : 0,
       links: J(b.links || []),
-      atts: J(b.atts || []),
     };
     let created = false;
     let rosterCount = 0;
@@ -1382,8 +1381,7 @@ export class StoreService {
           && Number(existing.mt) === desired.mt
           && Number(existing.counsel) === desired.counsel
           && Number(existing.special_counsel) === desired.specialCounsel
-          && existing.links === desired.links
-          && existing.atts === desired.atts;
+          && existing.links === desired.links;
         // 배포 직전에 구 UI가 보낸 요청은 토글로 상담 종류를 정했다. 응답만 유실된
         // 그 기존 행에 한해 당시 원문 계약까지 비교해 같은 requestId 재시도를 살린다.
         // 신규 INSERT에는 절대 이 경로를 쓰지 않으므로 태그 단일 진실은 유지된다.
@@ -1398,8 +1396,7 @@ export class StoreService {
           && Number(existing.mt) === (b.mt ? 1 : 0)
           && Number(existing.counsel) === (b.counsel ? 1 : 0)
           && Number(existing.special_counsel) === (b.specialCounsel ? 1 : 0)
-          && existing.links === desired.links
-          && existing.atts === desired.atts;
+          && existing.links === desired.links;
         if (!sameDefinition && !sameLegacyDefinition) {
           throw new HttpError(409, '같은 업무 생성 요청 ID에 다른 내용을 사용할 수 없습니다. 화면을 새로고침한 뒤 다시 시도해 주세요.');
         }
@@ -1418,12 +1415,12 @@ export class StoreService {
         ? this.currentSpecialSourceMonthForAssigneesOn(connection, specialAssignees)
         : '';
       connection.prepare(
-        `INSERT INTO tasks(id,title,descr,tag,start_date,due_date,scope,report_req,attach_req,mt,counsel,special_counsel,special_source_month,special_assignees,archived,links,atts,created_at,sort)
-         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?)`,
+        `INSERT INTO tasks(id,title,descr,tag,start_date,due_date,scope,report_req,attach_req,mt,counsel,special_counsel,special_source_month,special_assignees,links,created_at,sort)
+         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       ).run(id, desired.title, desired.descr, desired.tag, desired.startDate, desired.dueDate,
         desired.scope, desired.reportReq, desired.attachReq, desired.mt,
         counsel ? 1 : 0, specialCounsel ? 1 : 0, specialSourceMonth, J(specialAssignees),
-        desired.links, desired.atts, config.today,
+        desired.links, config.today,
         (this.primaryGet<any>(connection, 'SELECT MAX(sort) m FROM tasks')?.m || 0) + 1,
       );
       if (mode === 'special') rosterCount = this.freezeSpecialCounselRosterOn(connection, id, specialSourceMonth, specialAssignees);
@@ -1499,8 +1496,8 @@ export class StoreService {
           `INSERT INTO tasks(
              id,title,descr,tag,start_date,due_date,scope,report_req,attach_req,mt,counsel,special_counsel,
              special_source_month,special_assignees,self_managed,created_by_tid,self_source_month,
-             archived,links,atts,created_at,sort
-           ) VALUES(?,?,?,?,?,?,?,0,0,0,1,0,'','[]',1,?,?,0,'[]','[]',?,?)`,
+             links,created_at,sort
+           ) VALUES(?,?,?,?,?,?,?,0,0,0,1,0,'','[]',1,?,?,'[]',?,?)`,
         ).run(
           id, title, descr, SYSTEM_COUNSEL_TAGS.regular, start, due, scope,
           teacherTid, sourceMonth, config.today,
@@ -1519,9 +1516,9 @@ export class StoreService {
         const classNames = new Map(classes.map((cls) => [String(cls.class_code), String(cls.class_name)]));
         const insert = primary.prepare(
           `INSERT INTO counsel_entries(
-             id,task_id,teacher,teacher_tid,cls,class_code,scode,student,phone,subject,content,synced,synced_at,done,
+             id,task_id,teacher,teacher_tid,cls,class_code,scode,student,phone,subject,content,synced,synced_at,
              roster_active,roster_source_month,roster_seen_at,roster_removed_at
-           ) VALUES(?,?,?,?,?,?,?,?,?,'','',0,'',0,1,?,?, '')`,
+           ) VALUES(?,?,?,?,?,?,?,?,?,'','',0,'',1,?,?, '')`,
         );
         const syncedAt = new Date().toISOString();
         for (const student of students) {
@@ -1615,7 +1612,7 @@ export class StoreService {
       id: r.id, taskId: r.task_id, teacher: r.teacher, cls: r.cls, scode: r.scode,
       teacherTid: r.teacher_tid || '', classCode: r.class_code || '',
       student: r.student, phone: r.phone || '', subject: r.subject || '', content: r.content || '',
-      synced: !!r.synced, syncedAt: r.synced_at || '', done: !!r.done,
+      synced: !!r.synced, syncedAt: r.synced_at || '',
       rosterActive: r.roster_active === undefined ? true : !!r.roster_active,
       rosterSourceMonth: r.roster_source_month || '', rosterSeenAt: r.roster_seen_at || '',
       rosterRemovedAt: r.roster_removed_at || '',
@@ -2124,8 +2121,8 @@ export class StoreService {
           const insert = primary.prepare(
             `INSERT INTO counsel_entries(
                id,task_id,teacher,teacher_tid,cls,class_code,scode,student,phone,subject,content,
-               synced,synced_at,done,roster_active,roster_source_month,roster_seen_at,roster_removed_at
-             ) VALUES(?,?,?,?,?,?,?,?,?,'','',0,'',0,1,?,?,'')`,
+               synced,synced_at,roster_active,roster_source_month,roster_seen_at,roster_removed_at
+             ) VALUES(?,?,?,?,?,?,?,?,?,'','',0,'',1,?,?,'')`,
           );
           const update = primary.prepare(
             `UPDATE counsel_entries
@@ -2670,7 +2667,7 @@ export class StoreService {
       for (const r of valid) {
         const ex = this.db.get<any>('SELECT id FROM counsel_entries WHERE task_id=? AND teacher=? AND cls=? AND scode=?', taskId, teacher, cls, r.scode);
         if (ex) this.db.run('UPDATE counsel_entries SET student=?, phone=? WHERE id=?', r.name, r.phone || '', ex.id);
-        else this.db.run('INSERT INTO counsel_entries(id,task_id,teacher,cls,scode,student,phone,subject,content,synced,synced_at,done) VALUES(?,?,?,?,?,?,?,?,?,0,?,0)', uid('ce'), taskId, teacher, cls, r.scode, r.name, r.phone || '', '', '', '');
+        else this.db.run('INSERT INTO counsel_entries(id,task_id,teacher,cls,scode,student,phone,subject,content,synced,synced_at) VALUES(?,?,?,?,?,?,?,?,?,0,?)', uid('ce'), taskId, teacher, cls, r.scode, r.name, r.phone || '', '', '', '');
       }
     });
     tx();
@@ -2694,15 +2691,6 @@ export class StoreService {
        WHERE id=?`,
       nextSubject, nextContent, id,
     );
-  }
-  setCounselDone(id: string, done: boolean) {
-    const changed = this.db.run(
-      'UPDATE counsel_entries SET done=? WHERE id=? AND roster_active=1',
-      done ? 1 : 0, id,
-    );
-    if (Number(changed?.changes || 0) !== 1) {
-      throw new HttpError(409, '최신 학생 명단에 없는 상담 대상입니다. 학생 목록을 새로고침해 주세요.');
-    }
   }
   getCounselEntry(id: string) { const r = this.db.get<any>('SELECT * FROM counsel_entries WHERE id=?', id); return r ? this.mapCounsel(r) : null; }
   /** 레거시/관리용 완료 표시. 새 전송 경로는 confirmCounselDelivery를 사용한다. */
@@ -3272,10 +3260,23 @@ export class StoreService {
       this.db.run('UPDATE tags SET color=?, emoji=? WHERE name=?', patch.color ?? t.color, patch.emoji ?? t.emoji, name);
     }
   }
+  /**
+   * 태그 삭제. 지운 태그를 쓰던 업무와 일정은 '행정'이 있으면 '행정'으로, 없으면 남은 일반 태그 가운데
+   * 순서가 가장 앞선 태그로 옮긴다. 옮길 태그가 없는데 쓰는 곳이 있으면 지우지 않는다.
+   */
   deleteTag(name: string) {
     if (FIXED_TAGS.includes(name)) throw new HttpError(400, `'${name}'은(는) 전체 상담 업무에 쓰이는 고정 태그라 삭제할 수 없습니다.`);
+    const remaining = this.db.all<any>('SELECT name FROM tags WHERE name<>? ORDER BY sort', name)
+      .map((tag) => String(tag.name))
+      .filter((tagName) => !FIXED_TAGS.includes(tagName));
+    const fallback = remaining.includes('행정') ? '행정' : remaining[0];
+    const inUse = this.db.get('SELECT 1 FROM tasks WHERE tag=? UNION ALL SELECT 1 FROM events WHERE tag=? LIMIT 1', name, name);
+    if (inUse && !fallback) throw new HttpError(409, '이 태그를 쓰는 업무나 일정을 옮길 다른 태그가 없어 삭제할 수 없습니다.');
     this.db.run('DELETE FROM tags WHERE name=?', name);
-    this.db.run("UPDATE tasks SET tag='행정' WHERE tag=?", name); // 폴백
+    if (fallback) {
+      this.db.run('UPDATE tasks SET tag=? WHERE tag=?', fallback, name);
+      this.db.run('UPDATE events SET tag=? WHERE tag=?', fallback, name);
+    }
   }
   /** 시스템 상담 태그가 없으면 생성 — 기존 색상/이모지 사용자 설정은 덮지 않는다. */
   ensureFixedTags(): boolean {
@@ -3714,12 +3715,6 @@ export class StoreService {
       throw new HttpError(400, '특강 반은 강사가 직접 수정할 수 없습니다. 특강 반 동기화를 사용해 주세요.');
     }
     throw new HttpError(400, '지원하지 않는 반 그룹입니다.');
-  }
-  resetTeacherPw(tid: string): string {
-    if (!this.teacherByTid(tid)) throw new HttpError(400,'강사 없음');
-    const tmp = 'np' + randomInt(100000, 1000000);
-    this.db.run('UPDATE teachers SET pw=? WHERE tid=?', hashPassword(tmp), tid);
-    return tmp;
   }
   /** 강사 로그인 비밀번호를 직접 지정 변경 */
   setTeacherPassword(tid: string, pw: string) {

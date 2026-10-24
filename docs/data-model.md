@@ -56,9 +56,7 @@
 | `self_managed` | INTEGER 0/1 | 다른 팀 사용자가 직접 만든 개인 상담일정 여부. 공용 업무 목록·일일보고에서는 제외 |
 | `created_by_tid` | TEXT, 기본 `''` | `self_managed=1` 상담일정의 소유 강사 `tid` |
 | `self_source_month` | TEXT, 기본 `''` | 개인 상담일정의 본인 반 명단 기준 수강년월 |
-| `archived` | INTEGER 0/1 | 보관 처리. **이 값을 1로 만드는 코드 경로가 없다** — `createTask`는 0 고정, `updateTask`는 컬럼 미포함, 전용 라우트도 없음. `demo` 시드의 t5만 `archived:1`. 프론트는 읽기만 하고(완료 취급·흐리게 표시·위저드 제외) 쓰지 않는다 |
 | `links` | TEXT(JSON), 기본 `'[]'` | `[{label, url}]` |
-| `atts` | TEXT(JSON), 기본 `'[]'` | `["파일명"]` (업무 지시용 첨부). `createTask`가 바디의 `atts`를 그대로 넣지만 **이를 보내는 프론트 경로가 없다** — `demo` 시드에만 값이 있고, 화면은 문자열을 그대로 `📎 파일명` 칩으로 렌더만 한다 |
 | `created_at` | TEXT | 생성일(앱 기준 오늘) |
 | `sort` | INTEGER | 정렬 |
 
@@ -88,7 +86,6 @@
 | `content` | TEXT | 상담 내용 — **로스터 재동기화 시 보존** |
 | `synced` | INTEGER 0/1 | 외부 ERP 전송 완료 여부. 주제/내용을 저장하면 0으로 리셋(재전송 필요) |
 | `synced_at` | TEXT | 전송 시각 라벨 (KST `MM/DD HH:mm`) |
-| `done` | INTEGER 0/1 | 강사 수동 완료 표시(했음/안했음) — synced와 별개 |
 | `delivery_state` | TEXT | `idle` · `pending` · `confirmed`. ERP POST 결과가 불확실한 동안 `pending`으로 원격 DB에 남겨 재전송을 차단 |
 | `delivery_stage` | TEXT | `''` · `claimed` · `posting` · `confirmed`. `claimed`는 공유 primary 선점만 완료되어 ERP POST가 없었음을 증명하고, `posting`부터는 도달 여부가 불확실해 재전송을 금지 |
 | `delivery_claim_token` | TEXT | 현재 `claimed/posting` 요청의 임의 소유 토큰. API 응답에는 노출하지 않고 단계 전환 CAS에만 사용하며 완료·안전 초기화 때 제거 |
@@ -145,7 +142,7 @@
 | `emoji` | TEXT, 기본 `'🗂️'` | 표시 이모지 |
 | `sort` | INTEGER | 정렬 |
 
-`'상담'`은 고정 태그(`FIXED_TAGS`)로 삭제·이름변경 불가. 부팅 시 `ensureFixedTags()`가 없으면 생성한다. 다른 태그를 삭제하면 그 태그를 쓰던 업무는 `'행정'`으로 폴백.
+`'상담'`은 고정 태그(`FIXED_TAGS`)로 삭제·이름변경 불가. 부팅 시 `ensureFixedTags()`가 없으면 생성한다. 다른 태그를 삭제하면 그 태그를 쓰던 업무와 일정은 `'행정'`으로, `'행정'`이 없으면 남은 일반 태그 가운데 `sort`가 가장 앞선 태그로 옮긴다. 옮길 태그가 없는데 쓰는 곳이 있으면 삭제를 거부한다.
 
 ### notices — 공지
 
@@ -240,8 +237,8 @@ DB 파일 위치는 서버리스(`process.env.VERCEL`)면 `/tmp/app.sqlite`, 로
 
 | 메서드 | 경로 | 용도 | 권한(UI) |
 |---|---|---|---|
-| POST | `/api/tasks` | 업무 생성 → `{id}`. 바디: `title, descr, tag, start, due, all|pick, reportReq, attachReq, mt, counsel, specialCounsel, links, atts, requestId?`. `requestId`가 있으면 요청자와 함께 결정적 task ID를 만들어 같은 요청 재시도를 멱등 처리하고, 같은 ID의 다른 payload는 409. `counsel`과 `specialCounsel` 동시 선택은 400. 특강상담은 최근 성공한 수강년월과 담당자별 로스터를 즉시 고정 | 팀장 |
-| POST | `/api/tasks/:id/edit` | 업무 수정. 일반/특강 상담 상호 배타를 재검증한다. 기존 특강상담은 대상이 0명이어도 상담 종류·배정 범위를 바꿀 수 없고, 일반상담은 엔트리가 생긴 뒤 같은 변경이 400이다. **`atts`·`archived`·`created_at`·`sort`는 수정 대상이 아니다** | 팀장 |
+| POST | `/api/tasks` | 업무 생성 → `{id}`. 바디: `title, descr, tag, start, due, all|pick, reportReq, attachReq, mt, counsel, specialCounsel, links, requestId?`. `requestId`가 있으면 요청자와 함께 결정적 task ID를 만들어 같은 요청 재시도를 멱등 처리하고, 같은 ID의 다른 payload는 409. `counsel`과 `specialCounsel` 동시 선택은 400. 특강상담은 최근 성공한 수강년월과 담당자별 로스터를 즉시 고정 | 팀장 |
+| POST | `/api/tasks/:id/edit` | 업무 수정. 일반/특강 상담 상호 배타를 재검증한다. 기존 특강상담은 대상이 0명이어도 상담 종류·배정 범위를 바꿀 수 없고, 일반상담은 엔트리가 생긴 뒤 같은 변경이 400이다. **`created_at`·`sort`는 수정 대상이 아니다** | 팀장 |
 | POST | `/api/tasks/:id/status` | `{teacher, status, at}` 완료/미완료 토글. `done`이면 report_req/attach_req 검증 후 통과해야 저장 | 강사 본인 |
 | POST | `/api/tasks/:id/mt` | `{teacher, part:'m'|'t', value, at}` MT 부분 완료 토글 | 강사 본인 |
 | POST | `/api/tasks/:id/report` | `{teacher, text, files}` 보고 저장(상태 변경 없음, 행 없으면 `status:'none'`으로 생성) | 강사 본인 |
@@ -261,7 +258,7 @@ DB 파일 위치는 서버리스(`process.env.VERCEL`)면 `/tmp/app.sqlite`, 로
 |---|---|---|---|
 | POST | `/api/tags` | `{name, color, emoji}` 생성. 중복 이름 400 | 팀장 |
 | POST | `/api/tags/:name` | 수정(이름/색/이모지). 이름 변경 시 tasks·events 연쇄 갱신. 고정 태그(`상담`) 이름 변경 400 | 팀장 |
-| DELETE | `/api/tags/:name` | 삭제(사용 중이던 업무는 `행정`으로 폴백). 고정 태그 400 | 팀장 |
+| DELETE | `/api/tags/:name` | 삭제. 사용 중이던 업무·일정은 `행정`(없으면 남은 일반 태그 중 첫 태그)으로 옮김. 고정 태그 400, 옮길 태그가 없으면 409 | 팀장 |
 
 `:name`은 URL 인코딩된 한글이라 서버가 `decodeURIComponent` 처리한다.
 
@@ -285,7 +282,6 @@ DB 파일 위치는 서버리스(`process.env.VERCEL`)면 `/tmp/app.sqlite`, 로
 | POST | `/api/teachers/:tid/ttt` | `{tttId, tttPw}` 외부 ERP 계정 저장(빈 pw면 기존 유지, 검증 없음) | 팀장 |
 | POST | `/api/teachers/:tid/lead` | `{isLead}` 팀장 권한 부여/해제 | 팀장 |
 | POST | `/api/teachers/:tid/other-team` | `{isOtherTeam}` 다른 팀 편의 기능 권한 부여/해제. 강사·반 동기화 mutation lease로 직렬화 | 팀장 |
-| POST | `/api/teachers/:tid/reset-pw` | 임시 비번 발급 → `{tmp}` (`'np' + 임의 6자리`, 해시로 저장) | 팀장 |
 | POST | `/api/teachers/:tid/password` | `{pw}` 비밀번호 직접 지정 | 팀장 |
 | DELETE | `/api/teachers/:tid` | 강사 삭제 + 처리 상태/보고/리마인드/일정/특강 로스터 정리. 다른 팀이면 본인 반 캐시와 소유 개인 상담일정·상담/부재 이력도 삭제 | 팀장 |
 
@@ -335,7 +331,6 @@ DB 파일 위치는 서버리스(`process.env.VERCEL`)면 `/tmp/app.sqlite`, 로
 |---|---|---|---|
 | GET | `/api/counsel/:taskId?teacher=&cls=` | `{kind:'regular'|'special', sourceMonth, classes, entries}`. 특강의 `sourceMonth`·`classes`는 업무 생성 시 고정된 엔트리 기준 | 강사 본인(서버가 tid에 바인딩), 팀장 |
 | POST | `/api/counsel/:taskId/sync-roster` | `{cls, date, teacher, tid}`. 일반은 강사 계정으로 외부 ERP 로스터를 보존갱신한다. 특강은 고정 엔트리 중 선택한 반 학생의 상세만 학원 단위 조회로 읽어 어머니 연락처를 보강하고 `{entries, rosterCount, missingPhoneCount?, kind, sourceMonth, classes, warnings}` 반환 | 강사 본인(서버가 tid에 바인딩), 팀장 |
-| POST | `/api/counsel/entry/:id/done` | `{done}` 수동 완료 표시 → `{entry}` | 강사 본인 |
 | POST | `/api/counsel/entry/:id/write` | `{taskId, cls, scode, subject, content, openLevel, date, tid}`. 오래된 `id`는 강사에 바인딩된 자연키로 재해결한다. 공유 Turso primary에서 `claimed`를 원자 선점하고 사전 건수와 `posting`을 영속한 뒤 **한 번만** ERP POST한다. ERP 확인·영속은 201, ERP 결과 또는 앱 확정이 대기 중이면 재전송 금지 202. 내용이 비면 400 | 강사 본인 |
 | POST | `/api/counsel/entry/:id/reconcile` | `{taskId, cls, scode, date, tid}`. `posting` 상담은 ERP 목록 읽기만으로 다시 확인하며 상담 저장 POST는 하지 않는다. `claimed`는 3분 소유 lease 동안 진행 중으로 두고, lease가 끝난 동일 토큰 선점만 CAS로 `idle/retryable`에 되돌린다. 확인 시 `confirmed/synced=1`, 아직 안 보이거나 조회가 지연되면 202와 재전송 금지를 유지 | 강사 본인 |
 | POST | `/api/counsel/entry/:id/resolve` | `{taskId, cls, scode, resolution:'not-sent'|'sent', fingerprint, tid}`. 외부 ERP을 사람이 직접 확인한 뒤에만 쓰는 `posting` 전송의 수동 종결이다. ERP를 호출하지 않고, `not-sent`는 `idle`(드래프트 보존·재전송 허용), `sent`는 `confirmed/synced=1`로 옮기며 확인 주체를 메시지에 남긴다. 지문이 다르거나 아직 `claimed`면 409 | 강사 본인 |

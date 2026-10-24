@@ -54,5 +54,5 @@ test('wizard persistence and date-sensitive integrations use the selected report
   assert.match(wizardSource, /reportDate < S\.today \? <Badge tone="neutral">지난 보고 작성<\/Badge>/);
   assert.match(wizardSource, /S\.journals\.find\(\(j: any\) => j\.date === reportDate\)/);
   assert.match(wizardSource, /groupOf\(reportDate\)/);
-  assert.match(wizardSource, /nextDay\(reportDate\)/);
+  assert.match(wizardSource, /koDate\(reportDate\)\}<span className="muted" style=\{\{ fontWeight: 400 \}\}> — 일일보고 날짜/);
 });

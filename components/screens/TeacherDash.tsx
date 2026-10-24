@@ -6,8 +6,8 @@ import { PageTitle, CalendarCard } from '@/components/screens/shared';
 export function TeacherDash() {
   const { App } = useApp();
   const S = App.state;
-  const myOpen = S.tasks.filter((t) => !t.archived && (t.statuses[S.me.name] || {}).status !== 'done').length;
-  const myUrgent = S.tasks.filter((t) => !t.archived && t.dday <= 2 && (t.statuses[S.me.name] || {}).status !== 'done').length;
+  const myOpen = S.tasks.filter((t) => (t.statuses[S.me.name] || {}).status !== 'done').length;
+  const myUrgent = S.tasks.filter((t) => t.dday <= 2 && (t.statuses[S.me.name] || {}).status !== 'done').length;
   const rep = S.myReport;
   const logVal = !rep || rep.status !== 'submitted' ? '미제출' : rep.confirmed ? '확인 완료' : '확인 대기';
   const logTone = !rep || rep.status !== 'submitted' ? 'destructive' : rep.confirmed ? 'success' : '';

@@ -72,8 +72,8 @@ function addTeacherAndTask(db) {
   db.run(
     `INSERT INTO tasks(
        id,title,descr,tag,start_date,due_date,scope,report_req,attach_req,mt,counsel,special_counsel,
-       special_source_month,special_assignees,archived,links,atts,created_at,sort
-     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,'[]','[]',?,1)`,
+       special_source_month,special_assignees,links,created_at,sort
+     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,'[]',?,1)`,
     'task-special', 'Special counsel', '', '특강 상담', '2026-07-24', '2026-07-31',
     JSON.stringify(['Alice']), 0, 0, 0, 0, 1, '2026-06', JSON.stringify(['Alice']), '2026-07-24',
   );
@@ -89,8 +89,8 @@ function addRegularTeacherAndTask(db) {
   db.run(
     `INSERT INTO tasks(
        id,title,descr,tag,start_date,due_date,scope,report_req,attach_req,mt,counsel,special_counsel,
-       special_source_month,special_assignees,archived,links,atts,created_at,sort
-     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,'[]','[]',?,1)`,
+       special_source_month,special_assignees,links,created_at,sort
+     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,'[]',?,1)`,
     'task-regular', 'Regular counsel', '', '상담', '2026-07-24', '2026-07-31',
     JSON.stringify(['Alice']), 0, 0, 0, 1, 0, '', '[]', '2026-07-24',
   );
@@ -99,13 +99,13 @@ function addRegularTeacherAndTask(db) {
 function insertEntry(db, row) {
   db.run(
     `INSERT INTO counsel_entries(
-       id,task_id,teacher,teacher_tid,cls,class_code,scode,student,phone,subject,content,synced,synced_at,done,
+       id,task_id,teacher,teacher_tid,cls,class_code,scode,student,phone,subject,content,synced,synced_at,
        delivery_state,delivery_stage,delivery_claim_token,delivery_fingerprint,delivery_date,
        roster_active,roster_source_month,roster_seen_at,roster_removed_at
-     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     row.id, row.taskId || 'task-special', 'Alice', row.teacherTid ?? 'alice', row.cls, row.classCode ?? 'C1',
     row.scode, row.student, row.phone || '', row.subject || '', row.content || '', row.synced || 0,
-    row.syncedAt || '', row.done || 0, row.deliveryState || 'idle', row.deliveryStage || '',
+    row.syncedAt || '', row.deliveryState || 'idle', row.deliveryStage || '',
     row.claimToken || '', row.fingerprint || '', row.deliveryDate || '', row.active === false ? 0 : 1,
     row.sourceMonth || '2026-06', row.seenAt || '2026-06-01T00:00:00.000Z',
     row.active === false ? '2026-06-20T00:00:00.000Z' : '',
@@ -157,7 +157,7 @@ test('primary roster reconcile adds, inactivates, reactivates and renames withou
     addTeacherAndTask(db);
     insertEntry(db, {
       id: 'confirmed', cls: 'Old Class', scode: 'S1', student: 'Old Name', phone: '111',
-      subject: 'Confirmed subject', content: 'Confirmed content', synced: 1, syncedAt: '2026-06-12', done: 1,
+      subject: 'Confirmed subject', content: 'Confirmed content', synced: 1, syncedAt: '2026-06-12',
       deliveryState: 'confirmed', deliveryStage: 'confirmed', fingerprint: 'confirmed-fingerprint', deliveryDate: '2026-06-12',
     });
     insertEntry(db, {
@@ -167,7 +167,7 @@ test('primary roster reconcile adds, inactivates, reactivates and renames withou
     });
     insertEntry(db, {
       id: 'departed', cls: 'Old Class', scode: 'S3', student: 'Departed Student', phone: '333',
-      subject: 'Departed draft', content: 'Never delete this', done: 1,
+      subject: 'Departed draft', content: 'Never delete this',
     });
     insertEntry(db, {
       id: 'returning', cls: 'New Class', scode: 'S4', student: 'Returning Student', phone: '444',
@@ -238,7 +238,6 @@ test('primary roster reconcile adds, inactivates, reactivates and renames withou
     assert.equal(confirmed.content, 'Confirmed content');
     assert.equal(confirmed.phone, '111');
     assert.equal(confirmed.synced, 1);
-    assert.equal(confirmed.done, 1);
     assert.equal(confirmed.delivery_state, 'confirmed');
     assert.equal(confirmed.delivery_fingerprint, 'confirmed-fingerprint');
     assert.deepEqual(
@@ -251,7 +250,7 @@ test('primary roster reconcile adds, inactivates, reactivates and renames withou
     assert.equal(pending.content, 'Pending content');
     assert.equal(pending.delivery_state, 'pending');
     assert.equal(pending.delivery_stage, 'posting');
-    assert.equal(db.get('SELECT roster_active,content,done FROM counsel_entries WHERE id=?', 'departed').content, 'Never delete this');
+    assert.equal(db.get('SELECT roster_active,content FROM counsel_entries WHERE id=?', 'departed').content, 'Never delete this');
     assert.equal(db.get('SELECT special_source_month FROM tasks WHERE id=?', 'task-special').special_source_month, '2026-07');
     assert.deepEqual(store.getCounselEntries('task-special', 'Alice').map((entry) => entry.scode).sort(), ['S1', 'S2', 'S4', 'S5', 'S6']);
 
@@ -563,8 +562,8 @@ test('regular primary snapshot exposes its one active roster month and rejects m
   db.run(
     `INSERT INTO tasks(
        id,title,descr,tag,start_date,due_date,scope,report_req,attach_req,mt,counsel,special_counsel,
-       special_source_month,special_assignees,archived,links,atts,created_at,sort
-     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,'[]','[]',?,1)`,
+       special_source_month,special_assignees,links,created_at,sort
+     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,'[]',?,1)`,
     'task-regular', 'Regular counsel', '', '상담', '2026-07-24', '2026-07-31',
     JSON.stringify(['Alice']), 0, 0, 0, 1, 0, '', '[]', '2026-07-24',
   );
@@ -657,7 +656,7 @@ test('a monthly class-code replacement reuses the unique class-name and student 
   addTeacherAndTask(db);
   insertEntry(db, {
     id: 'renewed-class', cls: 'Same Class', classCode: 'OLD-CODE', scode: 'S1', student: 'Student',
-    phone: '01012345678', subject: 'Keep subject', content: 'Keep content', done: 1,
+    phone: '01012345678', subject: 'Keep subject', content: 'Keep content',
   });
 
   const result = store.reconcileCounselRosterSnapshotOnPrimary({
@@ -671,10 +670,10 @@ test('a monthly class-code replacement reuses the unique class-name and student 
     { added: 0, updated: 1, inactivated: 0, total: 1 },
   );
   assert.deepEqual(
-    db.get(`SELECT id,class_code,phone,subject,content,done FROM counsel_entries WHERE task_id='task-special'`),
+    db.get(`SELECT id,class_code,phone,subject,content FROM counsel_entries WHERE task_id='task-special'`),
     {
       id: 'renewed-class', class_code: 'NEW-CODE', phone: '01012345678',
-      subject: 'Keep subject', content: 'Keep content', done: 1,
+      subject: 'Keep subject', content: 'Keep content',
     },
   );
 }));
@@ -763,7 +762,7 @@ test('an explicitly validated zero-target snapshot inactivates rows but keeps th
   addTeacherAndTask(db);
   insertEntry(db, {
     id: 'only-student', cls: 'Old Class', classCode: 'C1', scode: 'S1', student: 'Student',
-    phone: '01000000000', subject: 'Draft subject', content: 'Draft content', done: 1,
+    phone: '01000000000', subject: 'Draft subject', content: 'Draft content',
   });
   const result = store.reconcileCounselRosterSnapshotOnPrimary({
     taskId: 'task-special', teacher: 'Alice', teacherTid: 'alice', kind: 'special',
@@ -773,11 +772,9 @@ test('an explicitly validated zero-target snapshot inactivates rows but keeps th
   assert.equal(result.inactivated, 1);
   assert.deepEqual(result.entries, []);
   assert.deepEqual(
-    db.get('SELECT roster_active,phone,subject,content,done FROM counsel_entries WHERE id=?', 'only-student'),
-    { roster_active: 0, phone: '01000000000', subject: 'Draft subject', content: 'Draft content', done: 1 },
+    db.get('SELECT roster_active,phone,subject,content FROM counsel_entries WHERE id=?', 'only-student'),
+    { roster_active: 0, phone: '01000000000', subject: 'Draft subject', content: 'Draft content' },
   );
-  assert.throws(() => store.setCounselDone('only-student', false), /최신 학생 명단에 없는/);
-  assert.equal(db.get('SELECT done FROM counsel_entries WHERE id=?', 'only-student').done, 1);
   const stateTask = store.getState('lead', 'admin').tasks.find((task) => task.id === 'task-special');
   assert.deepEqual(stateTask.counselProg.Alice, {
     synced: 0, total: 0, absenceCount: 0, absencePendingCount: 0, noTarget: true,

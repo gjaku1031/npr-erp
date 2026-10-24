@@ -15,7 +15,7 @@ export function LeadDash() {
   const subs = reportTeachers.filter((t: any) => t.todaySubmitted).length;
   const confs = reportTeachers.filter((t: any) => t.todayConfirmed).length;
   const unsub = reportTeachers.filter((t: any) => !t.todaySubmitted);
-  const urgent = S.tasks.filter((t) => !t.archived && t.dday <= 2 && t.doneCount < t.total).length;
+  const urgent = S.tasks.filter((t) => t.dday <= 2 && t.doneCount < t.total).length;
 
   const activeNotices = S.notices.filter((n) => n.active);
 
@@ -53,14 +53,13 @@ export function LeadDash() {
     </Card>
   );
 
-  const activeTasks = S.tasks.filter((t) => !t.archived);
   const taskCard = (
-    <Card title="업무별 진행" action={<Badge tone="neutral">{`${activeTasks.length}건`}</Badge>}>
-      {activeTasks.length === 0 ? (
+    <Card title="업무별 진행" action={<Badge tone="neutral">{`${S.tasks.length}건`}</Badge>}>
+      {S.tasks.length === 0 ? (
         <p className="cap">진행 중인 업무가 없습니다.</p>
       ) : (
         <div className="col" style={{ gap: 13 }}>
-          {activeTasks.map((t) => {
+          {S.tasks.map((t) => {
             const meta = tagMeta(t.tag, S.tags);
             const pct = t.total ? Math.round((t.doneCount / t.total) * 100) : 0;
             return (
@@ -84,7 +83,7 @@ export function LeadDash() {
     <div>
       <PageTitle title="대시보드" cap={S.todayLabel} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
-        <Stat label="진행 업무" value={String(activeTasks.length)} hint="미보관 업무 수" />
+        <Stat label="진행 업무" value={String(S.tasks.length)} hint="등록된 업무 수" />
         <Stat label="오늘 보고 제출" value={`${subs} / ${reportTeachers.length}`} tone="success" hint={`미제출 ${unsub.length}명 · 확인 대기 ${subs - confs}명`} />
         <Stat label="마감 임박" value={String(urgent)} tone="destructive" hint="마감 D-2 이내 업무" />
       </div>

@@ -16,10 +16,10 @@ const diffDays = (a: Date, b: Date) => Math.round((a.getTime() - b.getTime()) / 
  * 이벤트 위치는 ISO 날짜(start~due/end)로 계산(연·월 넘겨도 정확).
  */
 export function Calendar(o: {
-  items: any[]; month?: number; today: string; isLead: boolean; tags: any[];
+  items: any[]; today: string; isLead: boolean; tags: any[];
   filter?: string; onFilter?: (f: string) => void; onDayClick?: (dateISO: string) => void;
   onOpenTask: (t: any) => void; onOpenEvent: (e: any) => void;
-  onPrev?: () => void; onNext?: () => void; onAddTeam: () => void; onAddPersonal: () => void;
+  onAddTeam: () => void; onAddPersonal: () => void;
 }) {
   const { items, today, isLead, tags, filter = 'all' } = o;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -117,9 +117,7 @@ export function Calendar(o: {
       while ((lanes[lane] || []).some((seg) => !(e0 < seg[0] || s0 > seg[1]))) lane++;
       (lanes[lane] = lanes[lane] || []).push([s0, e0]);
 
-      const meta = t.archived
-        ? { edge: 'var(--muted-foreground)', bg: 'var(--muted)', fg: 'var(--muted-foreground)', emoji: '', dashed: false }
-        : tagMeta(t.tag, tags);
+      const meta = tagMeta(t.tag, tags);
       const span = e0 - s0 + 1;
       const isEvent = isEventItem(t);
       const names = isEvent ? [t.owner === 'team' ? '전체' : '나'] : (t.scope === 'all' ? ['전체 강사'] : t.scope);

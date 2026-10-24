@@ -45,13 +45,7 @@ export function classesForDate(state: any, iso: string, teacher?: any, specialPe
 }
 export const ddayFrom = (a: string, b: string) => Math.round((+new Date(b + 'T00:00:00') - +new Date(a + 'T00:00:00')) / 86400000);
 export const ddayLabel = (d: number) => (d < 0 ? '완료' : d === 0 ? 'D-DAY' : 'D-' + d);
-export const ddayTone = (d: number, arch?: boolean) => (arch ? 'neutral' : d <= 2 ? 'destructive' : 'neutral');
-export const nextDay = (iso: string) => {
-  const d = new Date(iso + 'T00:00:00');
-  d.setDate(d.getDate() + 1);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-};
+export const ddayTone = (d: number) => (d <= 2 ? 'destructive' : 'neutral');
 
 // ── 태그 색상 ──
 export const COLORS: Record<string, any> = {

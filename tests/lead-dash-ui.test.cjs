@@ -35,7 +35,7 @@ test('lead-dash split uses equal minmax(0,1fr) columns and collapses to one colu
 });
 
 test('notice preview keeps single-line truncation so long markdown cannot widen the notice column', () => {
-  const noticeCard = section(dashSource, 'const noticeCard = (', 'const activeTasks =');
+  const noticeCard = section(dashSource, 'const noticeCard = (', 'const taskCard = (');
   assert.match(noticeCard, /overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'/);
   assert.match(noticeCard, /<Markdown text=\{n\.text\} inline \/>/);
 });

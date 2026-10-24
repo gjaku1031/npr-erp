@@ -1171,7 +1171,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (b1 && b2 === 'ttt' && m === 'POST') { store.setTeacherTtt(b1, b.tttId || '', b.tttPw || ''); return ok; }
       if (b1 && b2 === 'lead' && m === 'POST') { store.setTeacherLead(b1, !!b.isLead); return ok; }
       if (b1 && b2 === 'other-team' && m === 'POST') { store.setTeacherOtherTeam(b1, !!b.isOtherTeam); return ok; }
-      if (b1 && b2 === 'reset-pw' && m === 'POST') return { tmp: store.resetTeacherPw(b1) };
       if (b1 && b2 === 'password' && m === 'POST') { store.setTeacherPassword(b1, b.pw); return ok; }
       if (b1 && !b2 && m === 'DELETE') { store.deleteTeacher(b1); return ok; }
     }
@@ -2296,13 +2295,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const attempt = store.getCounselAbsenceAttempt(b2);
         assertCounselAbsenceAccess(attempt);
         return reconcilePendingCounselAbsence(attempt);
-      }
-      if (b1 === 'entry' && b2 && b3 === 'done' && m === 'POST') {
-        requireTeacher();
-        const entry = store.getCounselEntry(b2);
-        assertCounselEntryAccess(entry);
-        store.setCounselDone(b2, !!b.done);
-        return { entry: store.getCounselEntry(b2) };
       }
       if (b1 === 'entry' && b2 && b3 === 'write' && m === 'POST') {
         requireTeacher();

@@ -43,9 +43,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   self_managed INTEGER NOT NULL DEFAULT 0, -- 다른 팀 사용자가 스스로 만든 상담일정
   created_by_tid TEXT NOT NULL DEFAULT '', -- self_managed 상담일정 소유자 tid
   self_source_month TEXT NOT NULL DEFAULT '', -- 상담일정 생성/명단 갱신에 사용한 본인 반 수강년월
-  archived    INTEGER NOT NULL DEFAULT 0,
   links       TEXT NOT NULL DEFAULT '[]',       -- JSON [{label,url}]
-  atts        TEXT NOT NULL DEFAULT '[]',       -- JSON ["파일명"]
   created_at  TEXT NOT NULL,
   sort        INTEGER NOT NULL DEFAULT 0
 );
@@ -97,7 +95,6 @@ CREATE TABLE IF NOT EXISTS counsel_entries (
   content   TEXT NOT NULL DEFAULT '',    -- 상담 내용(재동기화 시 보존)
   synced    INTEGER NOT NULL DEFAULT 0,  -- 통통통 전송 완료
   synced_at TEXT NOT NULL DEFAULT '',
-  done      INTEGER NOT NULL DEFAULT 0,  -- 강사 수동 완료 표시(했음/안했음)
   -- ERP 쓰기는 성공했지만 조회/원격 DB 반영이 늦는 구간에도 재전송하지 않도록
   -- 전송 시도와 증거를 별도 상태로 보존한다. fingerprint는 원문을 노출하지 않는 SHA-256이다.
   delivery_state        TEXT NOT NULL DEFAULT 'idle', -- 'idle' | 'pending' | 'confirmed'

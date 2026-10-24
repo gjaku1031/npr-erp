@@ -319,7 +319,6 @@ function taskInput(overrides = {}) {
     counsel: false,
     specialCounsel: false,
     links: [],
-    atts: [],
     ...overrides,
   };
   // 새 계약에서는 시스템 태그가 상담 종류의 단일 진실이다. 기존 테스트 호출부의
@@ -1052,7 +1051,6 @@ test('special-counsel roster, source month, drafts, and no-target completion sta
     assert.deepEqual(store.getCounselContext(taskId, 'Bob').classes, []);
 
     store.saveCounselDraft(entries[0].id, 'Kept subject', 'Kept draft');
-    store.setCounselDone(entries[0].id, true);
     store.markCounselSynced(entries[0].id, '2026-07-22 12:00');
 
     let task = store.getState('lead', 'admin').tasks.find((item) => item.id === taskId);
@@ -1080,7 +1078,6 @@ test('special-counsel roster, source month, drafts, and no-target completion sta
         content: 'Kept draft',
         synced: true,
         syncedAt: '2026-07-22 12:00',
-        done: true,
       },
     );
     assert.deepEqual(store.getCounselContext(taskId, 'Alice'), {

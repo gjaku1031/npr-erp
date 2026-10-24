@@ -19,7 +19,6 @@ function freshUi(role: string, tid: string, name: string) {
     role, tid, name,
     page: role === 'lead' ? 'dashboard' : role === 'other' ? 'classes' : 'dash',
     logMode: 'list' as 'list' | 'wizard',
-    calMonth: null as string | null,
     taskFilter: 'all', tagFilter: '전체', myFilter: 'all',
     jSel: null as string | null, jNewDate: null as string | null,
     tSel: null as string | null, selTask: null as string | null,
@@ -754,7 +753,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const items = journal.items || [];
       const cl: any = {}; items.forEach((it: any) => { cl[it.id] = (payload.cl && payload.cl[it.id]) || { checked: false, report: '', files: [] }; });
       const myStatus: any = {};
-      S.tasks.filter((t: any) => !t.archived).forEach((t: any) => { myStatus[t.id] = (t.statuses[S.me.name] || {}).status || null; });
+      S.tasks.forEach((t: any) => { myStatus[t.id] = (t.statuses[S.me.name] || {}).status || null; });
       const specialPeriod = typeof payload.specialPeriod === 'boolean' ? payload.specialPeriod : isSpecialJournal(S, reportDate);
       const classSnapshot = Array.isArray(payload.classSnapshot)
         ? payload.classSnapshot.map((c: any) => String(c || '').trim()).filter(Boolean)
@@ -1249,12 +1248,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         App.ui.counselAbsenceReconciling = null;
         render();
       }
-    };
-    // 강사 수동 완료 표시(했음/안했음)
-    App.setCounselDone = function (taskId: string, entryId: string, done: boolean) {
-      const e = (App.counselByTask[taskId] || []).find((x: any) => x.id === entryId);
-      if (e) e.done = done; render();
-      (async () => { try { const r = await api.post(`/api/counsel/entry/${entryId}/done`, { done }); if (e && r.entry) Object.assign(e, r.entry); } catch { if (e) e.done = !done; } render(); })();
     };
     App.syncNotebooks = async function () {
       const w = App.ui.wizard, cls = App.todayClasses();

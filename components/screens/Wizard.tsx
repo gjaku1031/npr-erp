@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '@/lib/state';
 import { Btn, Card, Badge, Alert, Toggle, IconCircle, DraftField, DraftTextArea, FileChips, counselComplete, counselCountLabel, counselAbsenceStats } from '@/components/ui';
 import { Markdown, MarkdownEditor } from '@/components/Markdown';
-import { groupOf, koDate, koDateFull, nextDay, ddayLabel, ddayTone, pickFiles, toast } from '@/lib/helpers';
+import { groupOf, koDate, koDateFull, ddayLabel, ddayTone, pickFiles, toast } from '@/lib/helpers';
 
 // 체크리스트/보고 파일: 실제 파일 선택 → {name,url(data)} (4MB 가드)
 function attachFiles(target: any[], picked: any[]) {
@@ -20,10 +20,10 @@ function todayClasses(App: any): string[] {
   return App.todayClasses();
 }
 
-// 일일보고 날짜(작성 대상)에 해당하는 기간의 업무만 — 시작일 ≤ 보고일 ≤ 마감일, 보관 제외
+// 일일보고 날짜(작성 대상)에 해당하는 기간의 업무만 — 시작일 ≤ 보고일 ≤ 마감일
 function reportTasks(App: any): any[] {
   const today = App.reportDate();
-  return App.state.tasks.filter((t: any) => !t.archived && (!t.start || t.start <= today) && (!t.due || t.due >= today));
+  return App.state.tasks.filter((t: any) => (!t.start || t.start <= today) && (!t.due || t.due >= today));
 }
 
 // BR-GATE-1: 5단계 제출 게이트에서 MT·일반/특강 상담 업무는 제외한다(제출을 막지 않음).
@@ -170,7 +170,7 @@ function Step2() {
         <span className="muted">담당 반</span>
         <span style={{ fontWeight: 600 }}>{cls.join(' · ') || '없음'}<span className="muted" style={{ fontWeight: 400 }}>{` — ${group || '해당 없음'} 기준 · ${cls.length}개 반`}</span></span>
         <span className="muted">마감일</span>
-        <span style={{ fontWeight: 600 }}>{koDate(nextDay(reportDate))}<span className="muted" style={{ fontWeight: 400 }}> — 다음 날로 자동 지정</span></span>
+        <span style={{ fontWeight: 600 }}>{koDate(reportDate)}<span className="muted" style={{ fontWeight: 400 }}> — 일일보고 날짜</span></span>
       </div>
     </div>
   );

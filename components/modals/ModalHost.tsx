@@ -348,7 +348,7 @@ function TaskDetailModal({ id }: { id: string }) {
         <span className="cap">{`${t.startLabel} ~ ${t.dueLabel} · 담당 ${t.scope === 'all' ? '전체' : t.assignees.length + '명'}`}</span>
         <span className="grow" />
         <Badge tone={meta.tone} icon={meta.emoji}>{t.tag}</Badge>
-        <Badge tone={ddayTone(t.dday, t.archived)}>{ddayLabel(t.dday)}</Badge>
+        <Badge tone={ddayTone(t.dday)}>{ddayLabel(t.dday)}</Badge>
       </div>
       <Markdown text={t.descr} style={{ fontSize: 14, lineHeight: 1.7 }} />
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -358,7 +358,6 @@ function TaskDetailModal({ id }: { id: string }) {
         {t.counsel ? <Badge tone="brand">전체 상담 업무</Badge> : null}
         {t.specialCounsel ? <Badge tone="brand" icon="✦">특강상담 업무</Badge> : null}
         {(t.links || []).map((l: any, i: number) => <a className="link-chip" key={'l' + i} href={l.url} target="_blank" rel="noreferrer">{'🔗 ' + l.label}</a>)}
-        {(t.atts || []).map((a: string, i: number) => <span className="file-chip" key={'a' + i}>{'📎 ' + a}</span>)}
       </div>
       <div className="row" style={{ gap: 10 }}><div className="bar"><i style={{ width: pct + '%' }} /></div><span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted-foreground)' }}>{`${t.doneCount}/${t.total}명`}</span></div>
       {(t.counsel || t.specialCounsel) ? (
@@ -476,7 +475,7 @@ function LogViewModal({ m }: { m: any }) {
               const bad: React.CSSProperties = { color: 'var(--destructive)', fontWeight: 700 };
               const clDone = items.filter((it: any) => (cl[it.id] || {}).checked).length;
               const nbDone = clsArr.filter((c: string) => (nbByClass[c] || {}).written).length;
-              const myTasks = S.tasks.filter((t: any) => t.assignees.includes(m.name) && !t.archived);
+              const myTasks = S.tasks.filter((t: any) => t.assignees.includes(m.name));
               // 상담·특강상담 업무의 이행은 표시(myStatus)가 아닌 전송 진행도(counselProg)로 집계한다.
               // 특강상담 대상 없음(noTarget)은 V·'대상 없음'으로 완료 표기한다.
               const taskMark = (t: any) => {

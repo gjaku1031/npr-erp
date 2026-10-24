@@ -253,16 +253,15 @@ test('a session cookie sent from another origin cannot change state', async () =
   }
 });
 
-test('stored passwords are hashes, including issued temporary passwords', async () => {
+test('stored passwords are hashes, including passwords a lead sets for a teacher', async () => {
   const h = createHarness();
   try {
     for (const row of h.db.db.prepare('SELECT pw FROM teachers UNION ALL SELECT pw FROM lead_account').all()) {
       assert.ok(isPasswordHash(row.pw), 'every stored password is a hash');
     }
-    const temp = h.store.resetTeacherPw('teacher-1');
-    assert.match(temp, /^np\d{6}$/);
+    h.store.setTeacherPassword('teacher-1', 'set-by-lead-1');
     assert.ok(isPasswordHash(h.db.db.prepare('SELECT pw FROM teachers WHERE tid=?').get('teacher-1').pw));
-    await login('teacher-1', temp);
+    await login('teacher-1', 'set-by-lead-1');
   } finally {
     h.close();
   }

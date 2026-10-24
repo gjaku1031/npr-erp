@@ -58,7 +58,6 @@ function appWithTasks(tasks, myStatus = {}, reportDate = '2026-07-23') {
         id: `task-${index + 1}`,
         start: '2026-07-01',
         due: '2026-07-31',
-        archived: false,
         mt: false,
         counsel: false,
         specialCounsel: false,
@@ -106,9 +105,8 @@ test('a completed normal task allows submission alongside unfinished non-blockin
   assert.equal(taskGateDone(app.state.tasks[3], app.ui.wizard.myStatus), true);
 });
 
-test('archived and out-of-period normal tasks are excluded from the daily report gate', () => {
+test('out-of-period normal tasks are excluded from the daily report gate', () => {
   const app = appWithTasks([
-    { title: 'Archived', archived: true },
     { title: 'Past', due: '2026-07-22' },
     { title: 'Future', start: '2026-07-24' },
   ]);

@@ -7,7 +7,7 @@ import { tagMeta, ddayLabel, ddayTone } from '@/lib/helpers';
 export function LeadTasks() {
   const { App } = useApp();
   const S = App.state, u = App.ui;
-  const statusOf = (t: any) => (t.archived || t.doneCount >= t.total) ? 'done' : 'open';
+  const statusOf = (t: any) => (t.doneCount >= t.total ? 'done' : 'open');
   const counts = {
     all: S.tasks.length,
     open: S.tasks.filter((t: any) => statusOf(t) === 'open').length,
@@ -45,17 +45,16 @@ export function LeadTasks() {
               aria-label={`${t.title} 상세 보기`}
               onClick={open}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } }}
-              style={t.archived ? { opacity: 0.65 } : undefined}
             >
               <div className="row">
-                <span style={{ fontSize: 14, fontWeight: 600, color: t.archived ? 'var(--muted-foreground)' : 'var(--foreground)' }}>{t.title}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--foreground)' }}>{t.title}</span>
                 <Badge tone={meta.tone} icon={meta.emoji}>{t.tag}</Badge>
                 <Badge tone={t.scope === 'all' ? 'brand' : 'info'}>{t.scope === 'all' ? '전체' : '담당 ' + t.assignees.length + '명'}</Badge>
                 <span className="grow" />
-                <Badge tone={ddayTone(t.dday, t.archived)}>{ddayLabel(t.dday)}</Badge>
+                <Badge tone={ddayTone(t.dday)}>{ddayLabel(t.dday)}</Badge>
               </div>
               <div className="row" style={{ gap: 10 }}>
-                <div className="bar"><i className={t.archived ? 'gray' : ''} style={{ width: pct + '%' }} /></div>
+                <div className="bar"><i style={{ width: pct + '%' }} /></div>
                 <span style={{ fontSize: 12, color: 'var(--muted-foreground)', fontWeight: 500 }}>{`${t.doneCount}/${t.total}명`}</span>
               </div>
               <div style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>{`${t.startLabel} ~ ${t.dueLabel}${reqs ? ' · ' + reqs : ''}`}</div>

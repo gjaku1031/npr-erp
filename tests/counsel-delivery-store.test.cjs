@@ -78,8 +78,8 @@ function insertEntry(db, overrides = {}) {
   };
   db.run(
     `INSERT INTO counsel_entries(
-      id,task_id,teacher,cls,scode,student,phone,subject,content,synced,synced_at,done
-    ) VALUES(?,?,?,?,?,?,?,?,?,0,'',0)`,
+      id,task_id,teacher,cls,scode,student,phone,subject,content,synced,synced_at
+    ) VALUES(?,?,?,?,?,?,?,?,?,0,'')`,
     entry.id, entry.taskId, entry.teacher, entry.cls, entry.scode, entry.student,
     entry.phone || '', entry.subject || '', entry.content || '',
   );

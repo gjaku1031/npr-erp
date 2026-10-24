@@ -32,18 +32,15 @@ export function Bubble({ name, submitted, confirmed, date }: { name: string; sub
 export function CalendarCard() {
   const { App } = useApp();
   const S = App.state, u = App.ui;
-  if (u.calMonth == null) u.calMonth = Number(S.today.slice(5, 7));
   if (u.calFilter == null) u.calFilter = 'all';
   const items = S.tasks.concat(S.events);
   return (
     <Calendar
-      items={items} month={u.calMonth} today={S.today} isLead={u.role === 'lead'} tags={S.tags}
+      items={items} today={S.today} isLead={u.role === 'lead'} tags={S.tags}
       filter={u.calFilter} onFilter={(f) => { u.calFilter = f; App.render(); }}
       onDayClick={(date) => App.openDayAdd(date)}
       onOpenTask={(t) => App.openModal({ type: 'task', id: t.id })}
       onOpenEvent={(e) => App.openModal({ type: 'eventView', id: e.id })}
-      onPrev={() => { u.calMonth = Math.max(1, u.calMonth - 1); App.render(); }}
-      onNext={() => { u.calMonth = Math.min(12, u.calMonth + 1); App.render(); }}
       onAddTeam={() => App.openEventCreate('team')}
       onAddPersonal={() => App.openEventCreate('personal')}
     />

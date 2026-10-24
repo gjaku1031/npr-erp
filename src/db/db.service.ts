@@ -242,10 +242,9 @@ export class DbService {
     // task_status.m_done / t_done (MT 부분완료)
     if (this.addColumn('task_status', 'm_done', 'INTEGER NOT NULL DEFAULT 0')) changed = true;
     if (this.addColumn('task_status', 't_done', 'INTEGER NOT NULL DEFAULT 0')) changed = true;
-    // counsel_entries.subject / done (상담 주제 + 강사 수동 완료)
+    // counsel_entries.subject(상담 주제)와 명단·식별 열
     if (this.columnNames('counsel_entries').length) {
       if (this.addColumn('counsel_entries', 'subject', `TEXT NOT NULL DEFAULT ''`)) changed = true;
-      if (this.addColumn('counsel_entries', 'done', 'INTEGER NOT NULL DEFAULT 0')) changed = true;
       if (this.addColumn('counsel_entries', 'teacher_tid', `TEXT NOT NULL DEFAULT ''`)) changed = true;
       if (this.addColumn('counsel_entries', 'class_code', `TEXT NOT NULL DEFAULT ''`)) changed = true;
       if (this.addColumn('counsel_entries', 'roster_active', 'INTEGER NOT NULL DEFAULT 1')) changed = true;
