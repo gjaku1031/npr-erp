@@ -387,7 +387,7 @@ DB 파일 위치는 서버리스(`process.env.VERCEL`)면 `/tmp/app.sqlite`, 로
 | `tags`, `notices`, `journals` | 태그(+`fixed` 플래그) / 공지 / 날짜별 체크리스트. `journals[].specialPeriod`가 생성 당시 특강 여부를 보존한다 |
 | `settings` | `{wtestM, wtestT, specialPeriodEnabled, specialSyncDate, specialSyncMonth, specialSyncAt, specialSyncSummary}`. 마지막 요약은 팀장에게만 반환하고 강사에게는 `null` |
 
-`journals[]` 각 항목은 `{date, label(`7월 11일 (토)`), items, specialPeriod, kind, reports}`이고 `kind`는 today 대비 `'today'|'past'|'future'`다. `reports`는 `{강사명: {submitted, confirmed}}` 형태로 날짜별 실제 현황이 붙고, `confirmed`는 `submitted && confirmed`로 계산해 미제출+confirmed=1인 과거 데이터를 표시상 교정한다.
+`journals[]` 각 항목은 `{date, label(`7월 11일 (토)`), items, specialPeriod, kind, reports}`이고 `kind`는 today 대비 `'today'|'past'|'future'`다. `reports`는 `{강사명: {submitted, confirmed}}` 형태로 날짜별 실제 현황이 붙고(팀장은 전원, 강사는 본인 것만), `confirmed`는 `submitted && confirmed`로 계산해 미제출+confirmed=1인 과거 데이터를 표시상 교정한다.
 
 ### 역할별로 달라지는 필드
 
