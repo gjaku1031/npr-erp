@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Node 내장 테스트 러너. 테스트마다 임시 SQLite를 쓰고 외부에 접속하지 않음
+      - name: Test
+        run: npm test
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # 타입 오류가 있으면 빌드가 멈춤. ESLint는 설정하지 않아 빌드에서 건너뜀
+      - name: Build
+        run: npm run build

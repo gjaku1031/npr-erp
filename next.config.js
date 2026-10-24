@@ -4,8 +4,8 @@ const NATIVE = ['libsql'];
 
 const nextConfig = {
   reactStrictMode: false, // 낙관적 업데이트/외부 상태 이중 렌더 방지
+  // ESLint 설정이 없어 빌드에서 린트를 건너뜀. 타입 오류는 빌드를 멈춤
   eslint: { ignoreDuringBuilds: true },
-  typescript: { ignoreBuildErrors: true },
   // public/ 정적 자산 캐시(콘텐츠 해시가 없어 immutable 대신 SWR로 안전하게):
   //  · 배포로 파일이 바뀌면 max-age 만료 전까진 stale-while-revalidate로 백그라운드 갱신
   //  · _next/static(해시 파일)은 Next가 이미 immutable 처리하므로 건드리지 않음

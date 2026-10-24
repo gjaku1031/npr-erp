@@ -74,9 +74,11 @@ pnpm dev                     # http://localhost:3000
 
 ```bash
 npm test           # Node 내장 테스트 러너, 테스트마다 임시 SQLite, 외부 접속 없음
-npx tsc --noEmit   # 빌드 설정이 타입 오류를 무시하므로 따로 확인
-npm run build
+npx tsc --noEmit
+npm run build      # 타입 오류가 있으면 빌드도 멈춤
 ```
+
+GitHub Actions가 push와 PR마다 같은 세 단계를 돌림(`.github/workflows/ci.yml`).
 
 P1은 상담 전송의 선점·확인·종결(`counsel-delivery-store.test.cjs`, `counsel-api-reconcile.test.cjs`)과 대조 규칙(`counsel-write.test.cjs`), P2는 읽기 일관성(`read-consistency-api.test.cjs`)과 반 갱신의 지문 검사·잠금(`regular-class-sync.test.cjs`), P3는 특강상담 명단 고정(`special-feature.test.cjs`)이 검증함.
 

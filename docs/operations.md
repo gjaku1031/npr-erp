@@ -67,7 +67,7 @@ pnpm dev                  # http://localhost:3000
 
 ```bash
 npm test                  # Node 내장 테스트 러너, 임시 격리 SQLite, 외부 접속 없음
-npx tsc --noEmit          # next.config.js가 빌드에서 타입 오류를 무시하므로 따로 확인
+npx tsc --noEmit          # 빌드보다 빨리 타입만 확인
 npm run build
 ```
 
@@ -79,7 +79,7 @@ npm run build
 - 인증과 권한(`tests/auth-session.test.cjs`): 비밀번호 해시와 강도 매개변수 갱신, 세션 토큰 위조·만료, 요청의 `role`·`tid` 위조 무시, 팀장 전용·본인 전용 경로, 다른 출처 요청 차단, 로그인 시도 제한
 - 주간테스트 PPT/PDF(`tests/weekly-*.test.cjs`)와 화면 단위 테스트(`tests/*-ui.test.cjs`)
 
-CI 워크플로와 브라우저 E2E는 없다.
+GitHub Actions(`.github/workflows/ci.yml`)가 push와 PR마다 설치, `npm test`, `npx tsc --noEmit`, `npm run build`를 돌린다. 브라우저 E2E는 없다.
 
 ---
 
@@ -134,7 +134,7 @@ const V = process.env.VERCEL_GIT_COMMIT_SHA ? process.env.VERCEL_GIT_COMMIT_SHA.
 
 ### 알아둘 점
 
-- `next.config.js`는 `eslint.ignoreDuringBuilds`와 `typescript.ignoreBuildErrors`가 켜져 있다. **타입 에러가 빌드를 막지 않는다.**
+- `next.config.js`는 `eslint.ignoreDuringBuilds`만 켜져 있다. ESLint 설정이 없어 빌드에서 린트를 건너뛰고, 타입 오류는 빌드를 멈춘다.
 - 강사 외부 ERP 비밀번호의 평문 반환은 서버 내부 `getTeacherTtt()`에서만 일어나고 API 응답에는 실리지 않는다.
 - 실제 비밀번호·학생/학부모 전화번호는 문서·이슈·커밋에 남기지 않는다. 모의 구현의 연락처는 모두 `010-0000-XXXX` 형태의 가짜 값이다.
 - `reactStrictMode: false` (낙관적 업데이트 이중 렌더 방지).

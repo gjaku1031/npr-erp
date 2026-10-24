@@ -194,5 +194,5 @@ flowchart TD
 
 - `libsql`은 네이티브 모듈이라 webpack 번들 대신 **런타임 require**로 externals 처리한다.
 - `experimental.outputFileTracingIncludes`로 `/api/[[...slug]]` 함수에 `libsql`, `@libsql`, `@neon-rs`, `detect-libc` 바이너리를 명시 포함한다(externals라 자동 추적이 안 됨).
-- `eslint.ignoreDuringBuilds`, `typescript.ignoreBuildErrors` 모두 `true` — 빌드가 타입 오류를 막지 않는다.
+- `eslint.ignoreDuringBuilds`만 `true` — ESLint 설정이 없어 빌드에서 린트를 건너뛴다. 타입 오류는 빌드를 멈춘다.
 - 프론트는 `pages/index.tsx`에서 `dynamic(..., { ssr: false })`로 로드된다(브라우저 상태 의존).
