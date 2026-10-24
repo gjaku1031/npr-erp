@@ -1,6 +1,6 @@
 # 데이터 모델 + API 레퍼런스
 
-npr-notice 앱의 DB 스키마와 HTTP API 전체 목록. 모든 내용은 `` 아래 실제 코드에서 확인한 것이다.
+업무일지 앱의 DB 스키마와 HTTP API 전체 목록. 모든 내용은 이 저장소의 실제 코드에서 확인한 것이다.
 
 - 스키마 정의: `src/db/schema.ts` (raw SQL DDL 문자열 — ORM 없음)
 - DB 계층: `src/db/db.service.ts` (libSQL, better-sqlite3 호환 API)

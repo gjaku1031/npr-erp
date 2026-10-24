@@ -62,7 +62,7 @@
 
 ```bash
 pnpm install
-cp .env.example .env.local   # SEED_MODE=demo, APP_TODAY=2026-07-10 으로 바꿈
+cp .env.example .env.local   # APP_TODAY=2026-07-10 으로 바꿈(SEED_MODE는 이미 demo)
 pnpm dev                     # http://localhost:3000
 ```
 
