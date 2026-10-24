@@ -19,7 +19,7 @@ npr-notice 앱의 DB 스키마와 HTTP API 전체 목록. 모든 내용은 `` �
 |---|---|---|
 | `tid` | TEXT PK | 로그인 아이디 |
 | `name` | TEXT | 강사 이름. **다른 테이블들이 tid가 아니라 이 이름으로 강사를 참조한다** (task_status.teacher, daily_reports.teacher, counsel_entries.teacher) |
-| `pw` | TEXT | 앱 로그인 비밀번호의 scrypt 해시(`scrypt$N$r$p$salt$hash`, `src/auth/password.ts`). 해시가 아닌 값은 부팅 때 해시로 바뀐다 |
+| `pw` | TEXT | 앱 로그인 비밀번호의 scrypt 해시(`scrypt$N$r$p$salt$hash`, `src/auth/password.ts`) |
 | `classes` | TEXT(JSON), 기본 `{"월수금반":[],"화목토반":[],"특강 월수금반":[],"특강 화목토반":[]}` | 요일그룹 → 담당 반명 배열. 기존 DB의 2개 키도 부팅 시 4개 키로 정규화한다. 네 그룹 모두 읽기 전용이며, 일반 2개 그룹은 정규 반 동기화가, 특강 2개 그룹은 특강 반 동기화가 교체한다 |
 | `ttt_id` | TEXT, 기본 `''` | 강사 개인 외부 ERP 아이디 |
 | `ttt_pw` | TEXT, 기본 `''` | 외부 ERP 비밀번호 — **AES-256-GCM 암호화 저장** (`src/ttt/crypto.ts`, 키는 `APP_SECRET`에서 SHA-256 파생). 형식 `iv:tag:ciphertext` (base64). 복호화 실패 시 빈 문자열 반환 |

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const Module = require('node:module');
 const ts = require('typescript');
 
@@ -48,17 +49,13 @@ const backendModule = require('../src/backend.ts');
 backendModule.backend = () => activeBackend;
 const handler = require('../pages/api/[[...slug]].ts').default;
 
-function createHarness({ legacyPlainLead = false } = {}) {
+function createHarness() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'npr-auth-test-'));
   const previousCwd = process.cwd();
   let db;
   try {
     process.chdir(dir);
     db = new DbService();
-    if (legacyPlainLead) {
-      db.db.exec("CREATE TABLE lead_account (id TEXT PRIMARY KEY, pw TEXT NOT NULL, name TEXT NOT NULL DEFAULT '팀장')");
-      db.db.prepare('INSERT INTO lead_account(id,pw,name) VALUES(?,?,?)').run('admin', 'old-plain', 'Legacy Lead');
-    }
     db.init();
   } finally {
     process.chdir(previousCwd);
@@ -99,15 +96,19 @@ async function login(id, pw) {
   return { response, cookie: String(response.headers['set-cookie']).split(';')[0] };
 }
 
-test('passwords are stored as scrypt hashes and legacy plain values are recognized for rehash', () => {
+test('passwords are stored as scrypt hashes and only scrypt hashes verify', () => {
   const hash = hashPassword('secret-1');
   assert.ok(isPasswordHash(hash));
   assert.notEqual(hash, hashPassword('secret-1'), 'each hash uses its own salt');
   assert.deepEqual(verifyPassword(hash, 'secret-1'), { ok: true, needsRehash: false });
   assert.equal(verifyPassword(hash, 'secret-2').ok, false);
-  assert.deepEqual(verifyPassword('plain', 'plain'), { ok: true, needsRehash: true });
-  assert.equal(verifyPassword('plain', 'other').ok, false);
+  assert.equal(verifyPassword('not-a-hash', 'not-a-hash').ok, false, 'only scrypt hashes can match');
   assert.equal(verifyPassword('', '').ok, false, 'an empty stored value never matches');
+  const salt = Buffer.alloc(16, 7);
+  const lighter = ['scrypt', 1024, 8, 1, salt.toString('base64'),
+    crypto.scryptSync('secret-1', salt, 64, { N: 1024, r: 8, p: 1 }).toString('base64')].join('$');
+  assert.deepEqual(verifyPassword(lighter, 'secret-1'), { ok: true, needsRehash: true }, 'a hash made with other parameters asks for a new hash');
+  assert.equal(verifyPassword(lighter, 'secret-2').ok, false);
 });
 
 test('session tokens reject tampering, foreign signatures and expiry', () => {
@@ -252,14 +253,12 @@ test('a session cookie sent from another origin cannot change state', async () =
   }
 });
 
-test('stored passwords are hashes and plain passwords left by older databases are hashed at start-up', async () => {
-  const h = createHarness({ legacyPlainLead: true });
+test('stored passwords are hashes, including issued temporary passwords', async () => {
+  const h = createHarness();
   try {
     for (const row of h.db.db.prepare('SELECT pw FROM teachers UNION ALL SELECT pw FROM lead_account').all()) {
-      assert.ok(isPasswordHash(row.pw), 'no plain password remains in the database');
+      assert.ok(isPasswordHash(row.pw), 'every stored password is a hash');
     }
-    const { response } = await login('admin', 'old-plain');
-    assert.equal(response.payload.name, 'Legacy Lead');
     const temp = h.store.resetTeacherPw('teacher-1');
     assert.match(temp, /^np\d{6}$/);
     assert.ok(isPasswordHash(h.db.db.prepare('SELECT pw FROM teachers WHERE tid=?').get('teacher-1').pw));

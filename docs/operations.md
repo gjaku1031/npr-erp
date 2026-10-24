@@ -76,7 +76,7 @@ npm run build
 - 읽기 일관성·반 동기화(`tests/read-consistency-api.test.cjs`, `tests/regular-class-*.test.cjs`, `tests/counsel-roster-*.test.cjs`)
 - 특강 도메인(`tests/special-feature.test.cjs`): 특강기간 ON/OFF와 일일보고 생성 시점 플래그 보존, 정확한 강사 매칭, 수강년월·학생 로스터 고정, 특강일 반 병합
 - 모의 ERP(`tests/ttt-mock-gateway.test.cjs`): 결정적 반·원생, 계정 없는 조회의 빈 값, 모의 구현 위 상담 쓰기
-- 인증과 권한(`tests/auth-session.test.cjs`): 비밀번호 해시와 이전 형식 전환, 세션 토큰 위조·만료, 요청의 `role`·`tid` 위조 무시, 팀장 전용·본인 전용 경로, 다른 출처 요청 차단, 로그인 시도 제한
+- 인증과 권한(`tests/auth-session.test.cjs`): 비밀번호 해시와 강도 매개변수 갱신, 세션 토큰 위조·만료, 요청의 `role`·`tid` 위조 무시, 팀장 전용·본인 전용 경로, 다른 출처 요청 차단, 로그인 시도 제한
 - 주간테스트 PPT/PDF(`tests/weekly-*.test.cjs`)와 화면 단위 테스트(`tests/*-ui.test.cjs`)
 
 CI 워크플로와 브라우저 E2E는 없다.

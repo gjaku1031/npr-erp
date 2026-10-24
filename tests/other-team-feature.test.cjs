@@ -30,6 +30,7 @@ process.env.LEAD_NAME = 'Test Lead';
 
 const { DbService } = require('../src/db/db.service.ts');
 const { StoreService } = require('../src/api/store.service.ts');
+const { hashPassword } = require('../src/auth/password.ts');
 
 function createHarness() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'npr-other-team-'));
@@ -67,7 +68,7 @@ function addTeacher(db, tid, name, { other = false, lead = false } = {}) {
      VALUES(?,?,?, ?,?,?,?)`,
     tid,
     name,
-    '1234',
+    hashPassword('1234'),
     JSON.stringify({
       '월수금반': [], '화목토반': [],
       '특강 월수금반': [], '특강 화목토반': [],

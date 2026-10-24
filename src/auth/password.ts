@@ -21,17 +21,12 @@ export function hashPassword(plain: string): string {
 }
 
 /**
- * 저장값과 입력을 비교한다. 해시가 아닌 저장값은 이전 형식(해시 도입 전 DB)으로 보고 일치 여부와 함께
- * `needsRehash`를 돌려준다. 호출자는 일치했을 때 즉시 해시로 바꿔 저장한다.
+ * 저장된 해시와 입력을 비교한다. scrypt 해시가 아닌 저장값은 맞지 않는 것으로 본다. 해시를 만든 강도 매개변수(N·r·p)가
+ * 지금 값과 다르면 `needsRehash`를 함께 돌려주고, 호출자는 비밀번호가 맞았을 때 지금 매개변수로 다시 해시해 저장한다.
  */
 export function verifyPassword(stored: string, plain: string): { ok: boolean; needsRehash: boolean } {
   const value = String(stored || '');
-  if (!isPasswordHash(value)) {
-    const a = Buffer.from(value);
-    const b = Buffer.from(String(plain ?? ''));
-    const ok = a.length > 0 && a.length === b.length && timingSafeEqual(a, b);
-    return { ok, needsRehash: ok };
-  }
+  if (!isPasswordHash(value)) return { ok: false, needsRehash: false };
   const [, n, r, p, saltB64, hashB64] = value.split('$');
   const expected = Buffer.from(hashB64 || '', 'base64');
   if (!expected.length) return { ok: false, needsRehash: false };

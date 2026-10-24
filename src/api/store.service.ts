@@ -409,7 +409,7 @@ export class StoreService {
     };
   }
 
-  /** 비밀번호 확인. 해시 도입 전 형식으로 저장된 값이 맞으면 그 자리에서 해시로 바꿔 저장한다. */
+  /** 비밀번호 확인. 저장된 해시의 강도 매개변수가 지금과 다르면 맞은 비밀번호로 그 자리에서 다시 해시해 저장한다. */
   private assertPassword(stored: string, pw: string, rehash: (hash: string) => void) {
     if (!pw) throw new HttpError(400,'비밀번호를 입력해 주세요.');
     const result = verifyPassword(stored, pw);
